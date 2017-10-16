@@ -5,7 +5,7 @@ const co = require('co');
 const promisify = require('util.promisify');
 const assert = require('power-assert');
 const sinon = require('sinon');
-const proxyquire = require('proxyquire').noCallThru();
+const proxyquire = require('proxyquire');
 const nock = require('nock');
 
 const helper = require('./test-helper');
@@ -67,6 +67,7 @@ describe('#receive', () => {
   let event;
   let handle;
   let messenger;
+  let locale;
 
   beforeEach(() => {
     messenger = {
@@ -74,7 +75,13 @@ describe('#receive', () => {
     }
     const stub = {
       'aws-sdk': awsStub,
-      './messenger': messenger
+      './messenger': messenger,
+      './locale/ja': {
+        received_text: 'Received text!',
+        received_image: 'Received image!',
+        will_be_in_touch_soon: 'Will be in touch soon!',
+        '@global': true
+      }
     };
     const handler = proxyquire('../app/handler', stub);
     handle = promisify(handler.receive.bind(handler));
@@ -93,11 +100,11 @@ describe('#receive', () => {
       });
     });
 
-    it('calls messenger.send with given text', () => {
+    it('calls messenger.send with locale.ja.received_text', () => {
       return handle(event, {}).then((res) => {
         assert(messenger.send.calledOnce);
         assert(messenger.send.getCall(0).args[0] === '6789012345678901');
-        assert(messenger.send.getCall(0).args[1].includes('Hello!'));
+        assert(messenger.send.getCall(0).args[1] === 'Received text!');
       });
     });
   });
@@ -118,12 +125,9 @@ describe('#receive', () => {
         yield handle(event, {});
         assert(messenger.send.calledTwice);
         assert(messenger.send.getCall(0).args[0] === '6789012345678901');
-        assert(messenger.send.getCall(0).args[1].length > 0);
-
-        const items = yield promisify(db.scan.bind(db))({ TableName: 'agrishot-test-photos' });
-        const item = items.Items[items.Items.length - 1];
+        assert(messenger.send.getCall(0).args[1] === 'Received image!');
         assert(messenger.send.getCall(1).args[0] === '6789012345678901');
-        assert(messenger.send.getCall(1).args[1].includes(item.image_url));
+        assert(messenger.send.getCall(1).args[1] === 'Will be in touch soon!');
       });
     });
 
