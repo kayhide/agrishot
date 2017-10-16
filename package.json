@@ -1,0 +1,28 @@
+{
+  "dependencies": {
+    "aws-sdk": "^2.127.0",
+    "co": "^4.6.0",
+    "mime-types": "^2.1.17",
+    "request": "^2.82.0",
+    "util.promisify": "^1.0.0",
+    "uuid": "^3.1.0"
+  },
+  "devDependencies": {
+    "intelli-espower-loader": "^1.0.1",
+    "mocha": "^3.5.3",
+    "nock": "^9.0.22",
+    "power-assert": "^1.4.4",
+    "proxyquire": "^1.8.0",
+    "serverless": "^1.23.0",
+    "sinon": "^3.3.0"
+  },
+  "directories": {
+    "test": "test/"
+  },
+  "scripts": {
+    "test": "node_modules/mocha/bin/mocha --recursive --require intelli-espower-loader",
+    "test-watch": "node_modules/mocha/bin/mocha --recursive --watch --require intelli-espower-loader",
+    "localstack": "SERVICES=dynamodb,s3 localstack start --docker",
+    "deploy": "serverless deploy -v"
+  }
+}
