@@ -16,9 +16,6 @@
     "serverless": "^1.23.0",
     "sinon": "^3.3.0"
   },
-  "directories": {
-    "test": "test/"
-  },
   "scripts": {
     "test": "node_modules/mocha/bin/mocha --recursive --require intelli-espower-loader",
     "test-watch": "node_modules/mocha/bin/mocha --recursive --watch --require intelli-espower-loader",
