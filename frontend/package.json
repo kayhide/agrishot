@@ -1,0 +1,16 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "pulp browserify --to dist/app.js",
+    "watch": "pulp -w browserify --to dist/app.js",
+    "watch-fast": "webpack --entry ./entry.js --output-filename dist/app.js --progress --watch",
+    "browse": "live-server dist --watch *.js,*.css,*.html --igrnoe .*"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.0",
+    "webpack": "^3.6.0"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.132.0"
+  }
+}
