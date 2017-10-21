@@ -1,6 +1,7 @@
 tmp/*
 !tmp/.keep
 
+frontend/.psc-ide-port
 frontend/dist/app.js
 
 
