@@ -1,36 +1,34 @@
 module Test.Main where
 
-import Prelude (class Show, bind, discard, pure, show, ($), (<<<))
-import Control.Monad.Aff (Canceler, runAff)
+import Aws.Dynamo
+
+import Control.Monad.Aff (Aff, Canceler, runAff)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, log, errorShow)
-import Data.Generic.Rep(class Generic)
-import Data.Generic.Rep.Show(genericShow)
-import Data.Traversable (traverse_)
-
-import Aws.Dynamo
+import Control.Monad.Eff.Exception (error)
+import Control.Monad.Except (runExcept, throwError)
+import Data.Either (Either(..))
+import Data.Foreign (Foreign)
+import Data.Foreign.Class (decode)
+import Data.List.NonEmpty as NEL
+import Data.Traversable (traverse, traverse_)
+import Model.Photo (Photo)
+import Prelude (bind, pure, show, ($), (<<<))
 
 main :: Eff (console :: CONSOLE, dynamo :: DYNAMO) (Canceler (console :: CONSOLE, dynamo :: DYNAMO))
 main =
   runAff errorShow pure do
-    liftEff $ log "OK"
     res <- scan conf opts
-    liftEff do
-      log "OK*********"
-      log "success:"
-      traverse_ (log <<< show) $ (res :: ScanResult Photo)."Items"
+    photos <- getItems (res :: ScanResult Foreign)."Items"
+    liftEff $ traverse_ (log <<< show) photos
+
   where
-    conf = { region: "local", endpoint: "http://localhost:4569" }
+    conf = { region: "local", endpoint: "http://localhost:4569", accessKeyId: "", secretAccessKey: "" }
     opts = { "TableName": "agrishot-test-photos" }
 
-newtype Photo =
-  Photo
-  { id :: String
-  , image_url :: String
-  , created_at :: Number
-  }
-
-derive instance genericPhoto :: Generic Photo _
-instance showPhoto :: Show Photo where
-  show = genericShow
+    getItems :: forall eff. Array Foreign -> Aff eff (Array Photo)
+    getItems objs =
+      case runExcept (traverse decode objs) of
+        Right xs -> pure xs
+        Left err -> throwError $ error $ show $ NEL.head err

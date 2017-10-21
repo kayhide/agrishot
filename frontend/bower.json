@@ -12,7 +12,8 @@
     "purescript-console": "^3.0.0",
     "purescript-halogen": "^2.0.0",
     "purescript-random": "^3.0.0",
-    "purescript-foreign-generic": "^5.0.0"
+    "purescript-foreign-generic": "^5.0.0",
+    "purescript-datetime": "^3.4.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^3.0.0"

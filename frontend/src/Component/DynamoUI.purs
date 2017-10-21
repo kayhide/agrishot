@@ -2,20 +2,24 @@ module Component.DynamoUI where
 
 import Prelude
 
-import Aws.Dynamo (DYNAMO, ScanResult, scan)
+import Aws.Dynamo (DYNAMO, scan)
 import Control.Monad.Aff (Aff)
+import Control.Monad.Eff.Exception (error)
+import Control.Monad.Except (runExcept, throwError)
+import Data.Array as Array
+import Data.DateTime (DateTime(..))
+import Data.Either (Either(..))
+import Data.Foreign (Foreign)
+import Data.Foreign.Class (decode)
+import Data.List.NonEmpty as NEL
 import Data.Maybe (Maybe(..))
+import Data.Traversable (traverse)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
+import Model.Photo (Photo(..))
 
-newtype Photo =
-  Photo
-  { id :: String
-  , image_url :: String
-  , created_at :: Number
-  }
 
 type State = Array Photo
 
@@ -44,6 +48,8 @@ ui tableName =
     HH.div_
       [ HH.h1_
           [ HH.text "Photo List" ]
+      , HH.div_
+          [ HH.text (show (Array.length state)) ]
       , HH.div_ (renderItem <$> state)
       , HH.button
           [ HE.onClick (HE.input_ Scan) ]
@@ -61,8 +67,15 @@ ui tableName =
   eval :: Query ~> H.ComponentDSL State Query Void (Aff (dynamo :: DYNAMO | eff))
   eval (Scan next) = do
     res <- H.liftAff $ scan conf opts
-    H.put (res :: ScanResult Photo)."Items"
+    photos <- H.liftAff $ getItems res."Items"
+    H.put photos
     pure next
     where
       conf = { region: "local", endpoint: "http://localhost:4569", accessKeyId: "xxxx", secretAccessKey: "xxxx" }
       opts = { "TableName": tableName }
+
+      getItems :: forall eff. Array Foreign -> Aff eff (Array Photo)
+      getItems objs =
+        case runExcept (traverse decode objs) of
+          Right xs -> pure xs
+          Left err -> throwError $ error $ show $ NEL.head err
