@@ -16,7 +16,7 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:${self:provider.region}:*:*"
+      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.RESOURCE_PREFIX}photos"
     - Effect: Allow
       Action:
         - s3:GetObject
@@ -25,7 +25,10 @@ provider:
       Resource: "arn:aws:s3:::${self:provider.environment.RESOURCE_PREFIX}photos/*"
   environment:
     RESOURCE_PREFIX: ${self:service}-${self:provider.stage}-
-    FACEBOOK_PAGE_ACCESS_TOKEN: ${env:FACEBOOK_PAGE_ACCESS_TOKEN}
+    FACEBOOK_PAGE_ACCESS_TOKEN: ${env:FACEBOOK_PAGE_ACCESS_TOKEN, self:custom.envs.FACEBOOK_PAGE_ACCESS_TOKEN}
+
+custom:
+  envs: ${file(../.env.${self:provider.stage}.yml)}
 
 package:
   include:

@@ -1,6 +1,9 @@
 tmp/*
 !tmp/.keep
 
+.env.*.yml
+!.env.test.yml
+
 frontend/.psc-ide-port
 frontend/dist/app.js
 

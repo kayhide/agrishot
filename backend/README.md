@@ -3,21 +3,7 @@
 ### NPM modules
 
 ```sh
-yarn install
-```
-
-### Environment variables
-
-We need env values as written in `.envrc.sample`.
-
-Make sure to give those env values when running tests or deploying.
-
-Recommended way to manage env values is to use [direnv](https://github.com/direnv/direnv).
-
-```sh
-$ cp .envrc.sample .envrc
-# edit .envrc
-$ direnv allow
+$ yarn install
 ```
 
 ### LocalStack
@@ -29,6 +15,7 @@ To install:
 ```sh
 $ pip install localstack
 ```
+
 
 ## Running tests
 
@@ -52,6 +39,7 @@ Or run tests automatically when file changes:
 $ yarn run test-watch
 ```
 
+
 ## AWS configs
 
 Prepare AWS configs for deployments.
@@ -70,7 +58,19 @@ For each stage the following profiles are required:
 5. Update local `~/.aws/config` adding profiles corresponding to IAM users.
 6. Update local `~/.aws/credentials` adding access keys for each profiles.
 
+
 ## Deploying
+
+### Environment variables
+
+We need env values provided by `.env.{stage}.yml`.
+
+Before deploying, make sure to give those env values.
+
+Beside of yaml file, env values can be provided by ENV.
+And if so, corresponding value by yaml is ignored.
+
+### Go deploy
 
 Backend is managed by [Serverless](https://serverless.com/).
 

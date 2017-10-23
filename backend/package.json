@@ -20,6 +20,7 @@
     "test": "node_modules/mocha/bin/mocha --recursive --require intelli-espower-loader",
     "test-watch": "node_modules/mocha/bin/mocha --recursive --watch --require intelli-espower-loader",
     "localstack": "SERVICES=dynamodb,s3 localstack start --docker",
-    "deploy": "serverless deploy -v"
+    "deploy": "serverless deploy -v",
+    "deploy-prod": "serverless deploy --stage prod -v"
   }
 }
