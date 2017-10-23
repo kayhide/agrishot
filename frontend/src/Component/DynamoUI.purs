@@ -2,7 +2,7 @@ module Component.DynamoUI where
 
 import Prelude
 
-import Aws.Dynamo (DYNAMO, scan)
+import Aws.Dynamo (DYNAMO, AwsConfig, scan)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (runExcept, throwError)
@@ -30,9 +30,10 @@ data Query a = Scan a
 type TableName = String
 
 ui :: forall eff.
+      AwsConfig ->
       TableName ->
       H.Component HH.HTML Query Unit Void (Aff (dynamo :: DYNAMO | eff))
-ui tableName =
+ui awsConfig tableName =
   H.component
     { initialState: const initialState
     , render
@@ -70,12 +71,11 @@ ui tableName =
 
   eval :: Query ~> H.ComponentDSL State Query Void (Aff (dynamo :: DYNAMO | eff))
   eval (Scan next) = do
-    res <- H.liftAff $ scan conf opts
+    res <- H.liftAff $ scan awsConfig opts
     photos <- H.liftAff $ getItems res."Items"
     H.put photos
     pure next
     where
-      conf = { region: "local", endpoint: "http://localhost:4569", accessKeyId: "xxxx", secretAccessKey: "xxxx" }
       opts = { "TableName": tableName }
 
       getItems :: forall eff. Array Foreign -> Aff eff (Array Photo)
