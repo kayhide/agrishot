@@ -8,9 +8,10 @@ import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (runExcept, throwError)
 import Data.Array as Array
 import Data.DateTime (DateTime(..))
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Foreign (Foreign)
 import Data.Foreign.Class (decode)
+import Data.Formatter.DateTime (formatDateTime)
 import Data.List.NonEmpty as NEL
 import Data.Maybe (Maybe(..))
 import Data.Traversable (traverse)
@@ -61,8 +62,11 @@ ui tableName =
         [ HH.div_
           [ HH.img [ HP.src image_url ] ]
         , HH.div_ [ HH.text id ]
-        , HH.div_ [ HH.text (show created_at) ]
+        , HH.div_ [ renderDateTime created_at ]
         ]
+
+      renderDateTime dt =
+        HH.text $ either id id $ formatDateTime "YYYY/MM/DD hh:mm:ss" dt
 
   eval :: Query ~> H.ComponentDSL State Query Void (Aff (dynamo :: DYNAMO | eff))
   eval (Scan next) = do
