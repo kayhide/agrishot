@@ -1,0 +1,3 @@
+AllowUnauthenticatedIdentities: false
+SupportedLoginProviders:
+  graph.facebook.com: "<%= facebook_app_id %>"

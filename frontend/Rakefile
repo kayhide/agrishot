@@ -1,0 +1,178 @@
+require 'erb'
+require 'json'
+require 'thor/shell'
+require 'pry'
+
+$root_dir = __dir__
+$stage = ENV['stage'] || 'dev'
+$env_file = "../.env.#{$stage}.yml"
+$app_name = "agrishot-#{$stage}"
+$profile = "#{$app_name}-deploy"
+$bucket_name = "#{$app_name}-web"
+$identity_pool_name = $app_name.gsub(/-/, '_')
+$dist_dir = 'dist'
+$config_dir = 'config'
+$wrk_dir = '.wrk'
+
+Dir.chdir $root_dir
+
+def aws cmd
+  res = `aws --profile #{$profile} #{cmd}`
+
+  raise RuntimeError.new "Error: #{cmd}" unless $?.success?
+
+  res
+end
+
+def env
+  @env ||= YAML.load_file($env_file)
+end
+
+def say_status *args
+  @shell ||= Thor::Base.shell.new
+  @shell.say_status *args
+end
+
+
+desc 'Display info'
+task :info do
+  puts "Root dir: #{$root_dir}"
+  puts "Stage: #{$stage}"
+  puts "App name: #{$app_name}"
+  puts "Profile: #{$profile}"
+  endpoint = "#{$wrk_dir}/s3/#{$bucket_name}/endpoint.txt"
+  if File.exists? endpoint
+    puts "Endpoint: #{File.read endpoint}"
+  else
+    puts "Endpoint: "
+  end
+end
+
+desc 'Open browser'
+task :browse do
+  dst_dir = File.join($wrk_dir, 's3', $bucket_name)
+  endpoint = File.join(dst_dir, 'endpoint.txt')
+  unless File.exists? endpoint
+    raise RuntimeError.new "#{endpoint} is not found"
+  end
+  sh "open #{File.read endpoint_file}"
+end
+
+desc 'Retrieve infomations from AWS'
+task :pull => ['s3:pull', 'cognito:pull']
+
+namespace :s3 do
+  dst_dir = File.join($wrk_dir, 's3', $bucket_name)
+  endpoint = File.join(dst_dir, 'endpoint.txt')
+  bucket_uri = "s3://#{$bucket_name}"
+
+  file endpoint do
+    aws ['s3', 'mb',  bucket_uri].join(' ')
+    region = aws ['configure', 'get', 'region'].join(' ')
+    open(endpoint, 'w') { |io| io << "http://#{$bucket_name}.s3-website-#{region}.amazonaws.com" }
+  end
+
+  desc 'Create S3 bucket'
+  task :create => [endpoint] do
+    aws ['s3', 'website',
+         '--index-document', 'index.html',
+         '--error-document', 'error.html',
+         bucket_uri].join(' ')
+  end
+
+  desc 'Deploy public web to S3 bucket'
+  task :deploy => [endpoint] do
+    aws ['s3', 'sync',
+         "#{$dist_dir}/", bucket_uri,
+         '--acl', 'public-read'].join(' ')
+  end
+
+  task :pull do
+    res = aws ['s3api', 'get-bucket-location',
+               '--bucket', $bucket_name].join(' ')
+    info = JSON.load(res)
+    region = info['LocationConstraint']
+    url = "http://#{$bucket_name}.s3-website-#{region}.amazonaws.com"
+    open(endpoint, 'w') { |io| io << "http://#{$bucket_name}.s3-website-#{region}.amazonaws.com" }
+    say_status :update, endpoint, :yellow
+  end
+end
+
+namespace :cognito do
+  dst_dir = File.join($wrk_dir, 'cognito/identity_pool', $identity_pool_name)
+  identity_pool_config = File.join(dst_dir, 'identity_pool_config.json')
+  identity_pool_info = File.join(dst_dir, 'identity_pool_info.json')
+  assume_role_policy = File.join(dst_dir, 'assume_role_policy.json')
+  assume_role_info = File.join(dst_dir, 'assume_role_info.json')
+
+  src_of = ->(dst) { File.join($config_dir, dst.pathmap('%n.yml')) }
+
+  directory dst_dir
+
+  file identity_pool_config => [$env_file, dst_dir, src_of.(identity_pool_config)] do |t|
+    src = t.prerequisites.last
+    dst = t.name
+    facebook_app_id = env['FACEBOOK_APP_ID']
+    res = ERB.new(open(src).read).result(binding)
+    open(dst, 'w') { |io| JSON.dump YAML.load(res), io }
+  end
+
+  file identity_pool_info => [identity_pool_config] do |t|
+    dst = t.name
+    res = aws ['cognito-identity',  'create-identity-pool',
+               '--identity-pool-name', $identity_pool_name,
+               '--cli-input-json', "file://#{identity_pool_config}"].join(' ')
+    open(dst, 'w') { |io| io << res }
+  end
+
+  file assume_role_policy => [identity_pool_info, src_of.(assume_role_policy)] do |t|
+    src = t.prerequisites.last
+    dst = t.name
+    info = JSON.load File.open(identity_pool_info)
+    identity_pool_id = info['IdentityPoolId']
+    res = ERB.new(open(src).read).result(binding)
+    open(dst, 'w') { |io| JSON.dump YAML.load(res), io }
+  end
+
+  file assume_role_info => [identity_pool_info, assume_role_policy] do |t|
+    dst = t.name
+    role_name = "#{$identity_pool_name}_cognito_authenticated"
+    res = aws ['iam', 'create-role',
+               "--role-name", role_name,
+               "--assume-role-policy-document", "file://#{assume_role_policy}"].join(' ')
+    open(dst, 'w') { |io| io << res }
+  end
+
+  desc 'Create cognito identity pool'
+  task :create => [identity_pool_info, assume_role_info] do |t|
+    info = JSON.load File.open(identity_pool_info)
+    identity_pool_id = info['IdentityPoolId']
+    role_info = JSON.load File.open(assume_role_info)
+    role_arn = role_info['Role']['Arn']
+    aws ['cognito-identity', 'set-identity-pool-roles',
+         '--identity-pool-id', identity_pool_id,
+         '--roles', "authenticated=#{role_arn}"].join(' ')
+  end
+
+  task :pull do
+    res = aws ['cognito-identity', 'list-identity-pools',
+               '--max-results', '60'].join(' ')
+    list = JSON.parse res
+    identity_pool_id = list['IdentityPools']
+                         .find { |x| x['IdentityPoolName'] == $identity_pool_name }
+                         .to_h['IdentityPoolId']
+
+    res = aws ['cognito-identity', 'describe-identity-pool',
+               '--identity-pool-id', identity_pool_id].join(' ')
+    open(identity_pool_info, 'w') { |io| io << res }
+    say_status :update, identity_pool_info, :yellow
+
+    role_name = "#{$identity_pool_name}_cognito_authenticated"
+    res = aws ['iam', 'get-role',
+               "--role-name", role_name].join(' ')
+    open(assume_role_info, 'w') { |io| io << res }
+    say_status :update, assume_role_info, :yellow
+  end
+end
+
+

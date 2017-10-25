@@ -5,6 +5,7 @@ tmp/*
 !.env.test.yml
 
 frontend/.psc-ide-port
+frontend/.wrk
 frontend/dist/app.js
 
 
