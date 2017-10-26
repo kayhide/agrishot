@@ -1,0 +1,17 @@
+Version: '2012-10-17'
+Statement:
+- Effect: Allow
+  Action:
+  - dynamodb:BatchGetItem
+  - dynamodb:BatchWriteItem
+  - dynamodb:DeleteItem
+  - dynamodb:GetItem
+  - dynamodb:PutItem
+  - dynamodb:Query
+  - dynamodb:UpdateItem
+  Resource:
+  - <%= table_arn %>
+  Condition:
+    ForAllValues:StringEquals:
+      dynamodb:LeadingKeys:
+      - "${cognito-identity.amazonaws.com:sub}"

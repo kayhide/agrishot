@@ -9,7 +9,9 @@ $env_file = "../.env.#{$stage}.yml"
 $app_name = "agrishot-#{$stage}"
 $profile = "#{$app_name}-deploy"
 $bucket_name = "#{$app_name}-web"
+$table_name = "#{$app_name}-photos"
 $identity_pool_name = $app_name.gsub(/-/, '_')
+$authenticated_role_name = "#{$app_name}-AuthenticatedRole"
 $dist_dir = 'dist'
 $config_dir = 'config'
 $wrk_dir = '.wrk'
@@ -18,8 +20,9 @@ Dir.chdir $root_dir
 
 def aws cmd
   res = `aws --profile #{$profile} #{cmd}`
-
-  raise RuntimeError.new "Error: #{cmd}" unless $?.success?
+  unless $?.success?
+    raise RuntimeError.new cmd
+  end
 
   res
 end
@@ -31,6 +34,27 @@ end
 def say_status *args
   @shell ||= Thor::Base.shell.new
   @shell.say_status *args
+end
+
+def with_file file, delete_on_fail: false
+  existed = File.exists? file
+  begin
+    open(file, 'w') { |io| io << yield }
+  rescue => err
+    if delete_on_fail
+      File.delete file if existed
+    else
+      raise err
+    end
+  end
+  existing = File.exists? file
+  if existed && existing
+    say_status :update, file, :yellow
+  elsif existed
+    say_status :remove, file, :magenta
+  elsif existing
+    say_status :create, file, :green
+  end
 end
 
 
@@ -55,11 +79,11 @@ task :browse do
   unless File.exists? endpoint
     raise RuntimeError.new "#{endpoint} is not found"
   end
-  sh "open #{File.read endpoint_file}"
+  sh "open #{File.read endpoint}"
 end
 
 desc 'Retrieve infomations from AWS'
-task :pull => ['s3:pull', 'cognito:pull']
+task :pull => ['s3:pull', 'cognito:pull', 'dynamodb:pull']
 
 namespace :s3 do
   dst_dir = File.join($wrk_dir, 's3', $bucket_name)
@@ -88,13 +112,13 @@ namespace :s3 do
   end
 
   task :pull do
-    res = aws ['s3api', 'get-bucket-location',
-               '--bucket', $bucket_name].join(' ')
-    info = JSON.load(res)
-    region = info['LocationConstraint']
-    url = "http://#{$bucket_name}.s3-website-#{region}.amazonaws.com"
-    open(endpoint, 'w') { |io| io << "http://#{$bucket_name}.s3-website-#{region}.amazonaws.com" }
-    say_status :update, endpoint, :yellow
+    with_file endpoint, delete_on_fail: true do
+      res = aws ['s3api', 'get-bucket-location',
+                 '--bucket', $bucket_name].join(' ')
+      info = JSON.load(res)
+      region = info['LocationConstraint']
+      "http://#{$bucket_name}.s3-website-#{region}.amazonaws.com"
+    end
   end
 end
 
@@ -111,36 +135,37 @@ namespace :cognito do
 
   file identity_pool_config => [$env_file, dst_dir, src_of.(identity_pool_config)] do |t|
     src = t.prerequisites.last
-    dst = t.name
     facebook_app_id = env['FACEBOOK_APP_ID']
-    res = ERB.new(open(src).read).result(binding)
-    open(dst, 'w') { |io| JSON.dump YAML.load(res), io }
+    with_file t.name do
+      res = ERB.new(open(src).read).result(binding)
+      JSON.dump YAML.load(res)
+    end
   end
 
   file identity_pool_info => [identity_pool_config] do |t|
-    dst = t.name
-    res = aws ['cognito-identity',  'create-identity-pool',
-               '--identity-pool-name', $identity_pool_name,
-               '--cli-input-json', "file://#{identity_pool_config}"].join(' ')
-    open(dst, 'w') { |io| io << res }
+    with_file t.name do
+      aws ['cognito-identity',  'create-identity-pool',
+           '--identity-pool-name', $identity_pool_name,
+           '--cli-input-json', "file://#{identity_pool_config}"].join(' ')
+    end
   end
 
   file assume_role_policy => [identity_pool_info, src_of.(assume_role_policy)] do |t|
     src = t.prerequisites.last
-    dst = t.name
     info = JSON.load File.open(identity_pool_info)
     identity_pool_id = info['IdentityPoolId']
-    res = ERB.new(open(src).read).result(binding)
-    open(dst, 'w') { |io| JSON.dump YAML.load(res), io }
+    with_file t.name do
+      res = ERB.new(open(src).read).result(binding)
+      JSON.dump YAML.load(res)
+    end
   end
 
   file assume_role_info => [identity_pool_info, assume_role_policy] do |t|
-    dst = t.name
-    role_name = "#{$identity_pool_name}_cognito_authenticated"
-    res = aws ['iam', 'create-role',
-               "--role-name", role_name,
-               "--assume-role-policy-document", "file://#{assume_role_policy}"].join(' ')
-    open(dst, 'w') { |io| io << res }
+    with_file t.name do
+      aws ['iam', 'create-role',
+           "--role-name", $authenticated_role_name,
+           "--assume-role-policy-document", "file://#{assume_role_policy}"].join(' ')
+    end
   end
 
   desc 'Create cognito identity pool'
@@ -162,17 +187,62 @@ namespace :cognito do
                          .find { |x| x['IdentityPoolName'] == $identity_pool_name }
                          .to_h['IdentityPoolId']
 
-    res = aws ['cognito-identity', 'describe-identity-pool',
-               '--identity-pool-id', identity_pool_id].join(' ')
-    open(identity_pool_info, 'w') { |io| io << res }
-    say_status :update, identity_pool_info, :yellow
+    with_file identity_pool_info, delete_on_fail: true do
+      aws ['cognito-identity', 'describe-identity-pool',
+           '--identity-pool-id', identity_pool_id].join(' ')
+    end
 
-    role_name = "#{$identity_pool_name}_cognito_authenticated"
-    res = aws ['iam', 'get-role',
-               "--role-name", role_name].join(' ')
-    open(assume_role_info, 'w') { |io| io << res }
-    say_status :update, assume_role_info, :yellow
+    with_file assume_role_info, delete_on_fail: true do
+      aws ['iam', 'get-role',
+           "--role-name", $authenticated_role_name].join(' ')
+    end
   end
 end
 
+namespace :dynamodb do
+  dst_dir = File.join($wrk_dir, 'dynamodb', $table_name)
+  table_info = File.join(dst_dir, 'table_info.json')
+  table_role_policy = File.join(dst_dir, 'table_role_policy.json')
+  table_role_info = File.join(dst_dir, 'table_role_info.json')
 
+  src_of = ->(dst) { File.join($config_dir, dst.pathmap('%n.yml')) }
+
+  file table_role_policy => [table_info, src_of.(table_role_policy)] do |t|
+    src = t.prerequisites.last
+    info = JSON.load File.open(table_info)
+    table_arn = info['Table']['TableArn']
+    with_file t.name do
+      res = ERB.new(open(src).read).result(binding)
+      JSON.dump YAML.load(res)
+    end
+  end
+
+  file table_role_info => [table_role_policy] do |t|
+    policy_name = "#{$table_name}_table_access"
+    with_file t.name do
+      aws ['iam', 'put-role-policy',
+           '--role-name', $authenticated_role_name,
+           '--policy-name', policy_name,
+           '--policy-document', "file://#{table_role_policy}"].join(' ')
+      aws ['iam', 'get-role-policy',
+           '--role-name', $authenticated_role_name,
+           '--policy-name', policy_name].join(' ')
+    end
+  end
+
+  task :put_role_policy => [table_role_info]
+
+  task :pull do
+    with_file table_info, delete_on_fail: true do
+      aws ['dynamodb', 'describe-table',
+           '--table-name', $table_name].join(' ')
+    end
+
+    with_file table_role_info, delete_on_fail: true do
+      policy_name = "#{$table_name}_table_access"
+      aws ['iam', 'get-role-policy',
+           '--role-name', $authenticated_role_name,
+           '--policy-name', policy_name].join(' ')
+    end
+  end
+end
