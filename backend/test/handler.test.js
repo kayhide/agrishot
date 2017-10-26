@@ -9,7 +9,8 @@ const proxyquire = require('proxyquire');
 const nock = require('nock');
 
 const helper = require('./test-helper');
-const Localstack = require('./localstack');
+const fixture = require('./fixture');
+const Localstack = require('../lib/localstack');
 
 const awsStub = {
   DynamoDB: Localstack.DynamoDB,
@@ -90,7 +91,7 @@ describe('#receive', () => {
   context('with text message', () => {
     beforeEach(() => {
       event = {
-        body: JSON.stringify(helper.fixture.read('receive_event'))
+        body: JSON.stringify(fixture.read('receive_event'))
       };
     });
 
@@ -112,11 +113,11 @@ describe('#receive', () => {
   context('with image message', () => {
     beforeEach(() => {
       event = {
-        body: JSON.stringify(helper.fixture.read('receive_event_image'))
+        body: JSON.stringify(fixture.read('receive_event_image'))
       };
       nock('https://agrishot.test')
         .get('/path/to/image.jpg?xxx=abcdef')
-        .reply(200, (uri, requestBody) => fs.createReadStream(helper.fixture.join('image.jpg')));
+        .reply(200, (uri, requestBody) => fs.createReadStream(fixture.join('image.jpg')));
     });
 
     it('calls messenger.send twice with some text and with image url', () => {
