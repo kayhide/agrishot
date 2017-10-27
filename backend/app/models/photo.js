@@ -1,5 +1,7 @@
 'use strict';
 
+const co = require('co');
+const _ = require('lodash');
 const url = require('url');
 const mime = require('mime-types');
 const uuid = require('uuid');
@@ -23,6 +25,7 @@ class Photo {
       id: this.id,
       image_url: this.image_url,
       image_meta: this.image_meta,
+      sender_id: this.sender_id,
       created_at: this.created_at
     };
   }
@@ -47,6 +50,22 @@ class Photo {
     const params = { TableName: `${process.env.RESOURCE_PREFIX}photos`, Item: this.attributes() };
     return promisify(db.put.bind(db))(params);
   }
+}
+
+Photo.tableName = `${process.env.RESOURCE_PREFIX}photos`;
+
+Photo.count = () => {
+  return co(function *() {
+    const data = yield promisify(db.scan.bind(db))({ TableName: Photo.tableName, Select: 'COUNT' });
+    return data.Count;
+  });
+}
+
+Photo.last = () => {
+  return co(function *() {
+    const data = yield promisify(db.scan.bind(db))({ TableName: Photo.tableName });
+    return _.maxBy(data.Items, 'created_at');
+  });
 }
 
 module.exports = Photo;

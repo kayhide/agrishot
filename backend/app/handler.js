@@ -28,6 +28,7 @@ module.exports.receive = (event, context, callback) => {
     if (attachments) {
       const src = attachments[0].payload.url;
       const photo = new Photo();
+      photo.sender_id = senderId;
       const meta = yield photo.store(src)
       photo.image_url = meta.Location;
       photo.image_meta = meta;

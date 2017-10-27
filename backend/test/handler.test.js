@@ -133,13 +133,17 @@ describe('#receive', () => {
     });
 
     it('creates photo record', () => {
-      const db = new Localstack.DynamoDB.DocumentClient();
       const params = { TableName: 'agrishot-test-photos', Select: 'COUNT' };
+      const Photo = proxyquire('../app/models/photo', { 'aws-sdk': awsStub })
       return co(function *() {
-        const org = yield promisify(db.scan.bind(db))(params);
+        const org = yield Photo.count();
         yield handle(event, {});
-        const cur = yield promisify(db.scan.bind(db))(params);
-        assert(cur.Count - org.Count === 1);
+        const cur = yield Photo.count();
+        assert(cur - org === 1);
+
+        const photo = yield Photo.last();
+        assert(photo.image_url.startsWith('http://localhost:4572/agrishot-test-photos/'));
+        assert(photo.sender_id === '6789012345678901');
       });
     });
 
