@@ -17,9 +17,11 @@
     "sinon": "^3.3.0"
   },
   "scripts": {
-    "test": "node_modules/mocha/bin/mocha --recursive --require intelli-espower-loader",
-    "test-watch": "node_modules/mocha/bin/mocha --recursive --watch --require intelli-espower-loader",
+    "test": "mocha --recursive --require intelli-espower-loader",
+    "test-watch": "mocha --recursive --watch --require intelli-espower-loader",
     "localstack": "SERVICES=dynamodb,s3 localstack start --docker",
+    "init": "node lib/init.js",
+    "init-test": "STAGE=test node lib/init.js",
     "deploy": "serverless deploy -v",
     "deploy-prod": "serverless deploy --stage prod -v"
   }
