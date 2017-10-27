@@ -17,7 +17,7 @@ function initEnv(env) {
 
 before((done) => {
   co(function *() {
-    const config = yield helper.readConfig();
+    const config = yield helper.readConfig('test');
     initEnv(config.provider.environment);
 
     const resources = config.resources && config.resources.Resources || [];

@@ -5,19 +5,36 @@ const path = require('path');
 const co = require('co');
 const promisify = require('util.promisify');
 const sinon = require('sinon');
+const _ = require('lodash');
 
 const Serverless = require('serverless');
 const AWS = require('aws-sdk');
 const Localstack = require('./localstack');
 
 module.exports = {
-  readConfig() {
+  readConfig(stage) {
     const sls = new Serverless();
     return sls.service.load().then(() => {
-      return sls.variables.populateService({ stage: 'test' });
+      return sls.variables.populateService({ stage });
     }).then(() => {
       return Promise.resolve(sls.service);
     });
+  },
+
+  createResources(config) {
+    const stackName = `${config.service}-${config.provider.stage}`
+    const template = {
+      Resources: config.resources.Resources,
+      Outputs: []
+    };
+    const params = {
+      StackName: stackName,
+      TemplateBody: JSON.stringify(template),
+      Tags: [{ Key: 'STAGE', Value: config.provider.stage }]
+    }
+
+    const cf = new Localstack.CloudFormation();
+    return promisify(cf.createStack.bind(cf))(params);
   },
 
   createResource(resource) {
@@ -60,13 +77,9 @@ module.exports = {
     const scan = promisify(client.scan.bind(client));
     const delete_ = promisify(client.delete.bind(client));
     return co(function *() {
-      const data = yield scan({ TableName: props.TableName });
-
+      const data = yield scan(params);
       for (let item of data.Items) {
-        let p = Object.assign({
-          Key: keys.reduce((o, k) => Object.assign(o, { [k]: item[k] }), {})
-        }, params);
-        yield delete_(p);
+        yield delete_(Object.assign({ Key: _.pick(item, keys) }, params));
       }
     });
   },
