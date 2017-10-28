@@ -65,6 +65,15 @@ functions:
           method: post
           cors: true
 
+  recognize:
+    handler: app/handler.recognize
+    events:
+      - stream:
+          type: dynamodb
+          arn:
+            Fn::GetAtt: [PhotosDynamoDbTable, StreamArn]
+          batchSize: 1
+
 resources:
   Resources:
     PhotosDynamoDbTable:

@@ -24,25 +24,39 @@ module.exports.receive = (event, context, callback) => {
   const text = messaging.message.text;
   const attachments = messaging.message.attachments;
 
-  return co(function *() {
+  co(function *() {
     if (attachments) {
       const src = attachments[0].payload.url;
       const photo = new Photo();
+      photo.src_url = src;
       photo.sender_id = senderId;
-      const meta = yield photo.store(src)
-      photo.image_url = meta.Location;
-      photo.image_meta = meta;
       yield photo.save();
       yield Messenger.send(senderId, t.received_image);
-      yield Messenger.send(senderId, t.will_be_in_touch_soon);
     }
     else {
       yield Messenger.send(senderId, t.received_text);
     }
-  }).then(() => {
     callback(null, { statusCode: 200 });
   }).catch((err) => {
     console.log(err);
     callback(null, { statusCode: 403, body: err });
+  });
+};
+
+module.exports.recognize = (event, context, callback) => {
+  if (event.Records[0].eventName !== 'INSERT') {
+    return callback(null, { message: 'Skipping non INSERT event', event });
+  }
+  co(function *() {
+    const data = event.Records[0].dynamodb.NewImage;
+    const photo = Photo.unmarshall(data);
+    const meta = yield Photo.store(photo, photo.src_url)
+    photo.image_url = meta.Location;
+    yield photo.save();
+    yield Messenger.send(photo.sender_id, t.will_be_in_touch_soon);
+    callback(null, { message: 'Recognize successfully called', event });
+  }).catch((err) => {
+    console.log(err);
+    callback(null, { message: 'Recognize failed', event });
   });
 };

@@ -15,14 +15,23 @@ function initEnv(env) {
   });
 }
 
+
+let config;
+
 before((done) => {
   co(function *() {
-    const config = yield helper.readConfig('test');
+    config = yield helper.readConfig('test');
     initEnv(config.provider.environment);
+    done();
+  });
+});
 
+beforeEach((done) => {
+  co(function *() {
     const resources = config.resources && config.resources.Resources || [];
     for (let x in resources) {
       yield helper.initResource(resources[x]);
     }
-  }).then(() => done());
+    done();
+  });
 });

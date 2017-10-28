@@ -115,25 +115,19 @@ describe('#receive', () => {
       event = {
         body: JSON.stringify(fixture.read('receive_event_image'))
       };
-      nock('https://agrishot.test')
-        .get('/path/to/image.jpg?xxx=abcdef')
-        .reply(200, (uri, requestBody) => fs.createReadStream(fixture.join('image.jpg')));
     });
 
-    it('calls messenger.send twice with some text and with image url', () => {
+    it('calls messenger.send once with some text', () => {
       const db = new Localstack.DynamoDB.DocumentClient();
       return co(function *() {
         yield handle(event, {});
-        assert(messenger.send.calledTwice);
+        assert(messenger.send.calledOnce);
         assert(messenger.send.getCall(0).args[0] === '6789012345678901');
         assert(messenger.send.getCall(0).args[1] === 'Received image!');
-        assert(messenger.send.getCall(1).args[0] === '6789012345678901');
-        assert(messenger.send.getCall(1).args[1] === 'Will be in touch soon!');
       });
     });
 
-    it('creates photo record', () => {
-      const params = { TableName: 'agrishot-test-photos', Select: 'COUNT' };
+    it('creates a photo record', () => {
       const Photo = proxyquire('../app/models/photo', { 'aws-sdk': awsStub })
       return co(function *() {
         const org = yield Photo.count();
@@ -142,8 +136,50 @@ describe('#receive', () => {
         assert(cur - org === 1);
 
         const photo = yield Photo.last();
-        assert(photo.image_url.startsWith('http://localhost:4572/agrishot-test-photos/'));
         assert(photo.sender_id === '6789012345678901');
+      });
+    });
+  });
+});
+
+
+describe('#recognize', () => {
+  let event;
+  let handle;
+  let messenger;
+  let locale;
+
+  beforeEach(() => {
+    messenger = {
+      send: sinon.stub().returns(Promise.resolve())
+    }
+    const stub = {
+      'aws-sdk': awsStub,
+      './messenger': messenger,
+      './locale/ja': {
+        received_text: 'Received text!',
+        received_image: 'Received image!',
+        will_be_in_touch_soon: 'Will be in touch soon!',
+        '@global': true
+      }
+    };
+    const handler = proxyquire('../app/handler', stub);
+    handle = promisify(handler.recognize.bind(handler));
+  });
+
+  context('with a new photo records', () => {
+    beforeEach(() => {
+      event = fixture.read('recognize_event');
+      nock('https://agrishot.test')
+        .get('/path/to/image.jpg?xxx=abcdef')
+        .reply(200, (uri, requestBody) => fs.createReadStream(fixture.join('image.jpg')));
+    });
+
+    it('calls messenger.send with a text', () => {
+      return handle(event, {}).then((res) => {
+        assert(messenger.send.calledOnce);
+        assert(messenger.send.getCall(0).args[0] === '6789012345678901');
+        assert(messenger.send.getCall(0).args[1] === 'Will be in touch soon!');
       });
     });
 
@@ -166,6 +202,18 @@ describe('#receive', () => {
                                    g.Grantee.URI === 'http://acs.amazonaws.com/groups/global/AllUsers' &&
                                    g.Permission === 'READ');
         assert(pr);
+      });
+    });
+
+    it('updates photo record', () => {
+      const Photo = proxyquire('../app/models/photo', { 'aws-sdk': awsStub })
+      return co(function *() {
+        const org = Photo.unmarshall(event.Records[0].dynamodb.NewImage);
+        yield handle(event, {});
+        const cur = yield Photo.find(org.id);
+
+        assert(org.image_url === undefined);
+        assert(cur.image_url.startsWith('http://localhost:4572/agrishot-test-photos/'));
       });
     });
   });

@@ -1,0 +1,37 @@
+{
+  "Records": [
+    {
+      "eventID": "0123456789zbcdef0123456789abcdef",
+      "eventName": "INSERT",
+      "eventVersion": "1.1",
+      "eventSource": "aws:dynamodb",
+      "awsRegion": "us-east-1",
+      "dynamodb": {
+        "ApproximateCreationDateTime": 1509086760,
+        "Keys": {
+          "id": {
+            "S": "a5e210e0-bbaa-11e7-8331-735816494114"
+          }
+        },
+        "NewImage": {
+          "src_url": {
+            "S": "https://agrishot.test/path/to/image.jpg?xxx=abcdef"
+          },
+          "sender_id": {
+            "S": "6789012345678901"
+          },
+          "created_at": {
+            "N": "1509086812334"
+          },
+          "id": {
+            "S": "a5e210e0-bbaa-11e7-8331-735816494114"
+          }
+        },
+        "SequenceNumber": "100000000005338859518",
+        "SizeBytes": 496,
+        "StreamViewType": "NEW_AND_OLD_IMAGES"
+      },
+      "eventSourceARN": "arn:aws:dynamodb:us-east-1:012345678901:table/agrishot-test-photos/stream/2017-10-27T06:31:43.295"
+    }
+  ]
+}
