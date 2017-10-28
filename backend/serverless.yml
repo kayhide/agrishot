@@ -19,6 +19,14 @@ provider:
       Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.RESOURCE_PREFIX}photos"
     - Effect: Allow
       Action:
+        - dynamodb:GetRecords
+        - dynamodb:GetShardIterator
+        - dynamodb:DescribeStream
+        - dynamodb:ListStreams
+      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.RESOURCE_PREFIX}photos/stream/*"
+      # Resource: "arn:aws:dynamodb:${self:provider.region}:*:*"
+    - Effect: Allow
+      Action:
         - s3:GetObject
         - s3:PutObject
         - s3:PutObjectACL
@@ -67,6 +75,8 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
         AttributeDefinitions:
           -
             AttributeName: id

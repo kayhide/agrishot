@@ -23,8 +23,10 @@ module.exports = {
 
   createResources(config) {
     const stackName = `${config.service}-${config.provider.stage}`
+    const resources = Object.assign({}, config.resources);
+    fixStreamEnabled(resources);
     const template = {
-      Resources: config.resources.Resources,
+      Resources: resources.Resources,
       Outputs: []
     };
     const params = {
@@ -94,5 +96,17 @@ module.exports = {
         yield deleteObject(Object.assign({ Key: item.Key }, params));
       }
     });
+  }
+};
+
+
+function fixStreamEnabled(resources) {
+  for (let key in resources.Resources) {
+    const resource = resources.Resources[key];
+    if (resource.Type == 'AWS::DynamoDB::Table') {
+      if (resource.Properties.StreamSpecification && resource.Properties.StreamSpecification.StreamViewType) {
+        resource.Properties.StreamSpecification.StreamEnabled = true;
+      }
+    }
   }
 };
