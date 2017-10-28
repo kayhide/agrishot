@@ -34,6 +34,8 @@ provider:
   environment:
     RESOURCE_PREFIX: ${self:service}-${self:provider.stage}-
     FACEBOOK_PAGE_ACCESS_TOKEN: ${env:FACEBOOK_PAGE_ACCESS_TOKEN, self:custom.envs.FACEBOOK_PAGE_ACCESS_TOKEN}
+    CUSTOMVISION_PROJECT_ID: ${env:CUSTOMVISION_PROJECT_ID, self:custom.envs.CUSTOMVISION_PROJECT_ID}
+    CUSTOMVISION_PREDICTION_KEY: ${env:CUSTOMVISION_PREDICTION_KEY, self:custom.envs.CUSTOMVISION_PREDICTION_KEY}
 
 custom:
   envs: ${file(../.env.${self:provider.stage}.yml)}

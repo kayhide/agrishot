@@ -147,19 +147,41 @@ describe('#recognize', () => {
   let event;
   let handle;
   let messenger;
+  let predictor;
   let locale;
 
   beforeEach(() => {
     messenger = {
       send: sinon.stub().returns(Promise.resolve())
     }
+    predictor = {
+      predict: sinon.stub().returns(Promise.resolve([
+        {
+          "TagId": "d3398b08-0dec-4ba1-a361-3da98d6bb92d",
+          "Tag": "Mikan Sabi Dani",
+          "Probability": 0.9801368
+        },
+        {
+          "TagId": "ef9786bc-71b0-4bf7-8173-ee7eb9e813f5",
+          "Tag": "Chano Hokori Dani",
+          "Probability": 0.318256438
+        },
+        {
+          "TagId": "570ed067-e870-46a7-a381-1dfe94a31d7b",
+          "Tag": "Kokuten Byo",
+          "Probability": 0.261666328
+        }
+      ]))
+    }
     const stub = {
       'aws-sdk': awsStub,
       './messenger': messenger,
+      './predictor': predictor,
       './locale/ja': {
         received_text: 'Received text!',
         received_image: 'Received image!',
         will_be_in_touch_soon: 'Will be in touch soon!',
+        predictions: (items) => ["Predictions:", ...items].join("\n"),
         '@global': true
       }
     };
@@ -177,9 +199,11 @@ describe('#recognize', () => {
 
     it('calls messenger.send with a text', () => {
       return handle(event, {}).then((res) => {
-        assert(messenger.send.calledOnce);
+        assert(messenger.send.calledTwice);
         assert(messenger.send.getCall(0).args[0] === '6789012345678901');
-        assert(messenger.send.getCall(0).args[1] === 'Will be in touch soon!');
+        assert(messenger.send.getCall(0).args[1] === 'Predictions:\nMikan Sabi Dani 98%\nChano Hokori Dani 31%');
+        assert(messenger.send.getCall(1).args[0] === '6789012345678901');
+        assert(messenger.send.getCall(1).args[1] === 'Will be in touch soon!');
       });
     });
 
