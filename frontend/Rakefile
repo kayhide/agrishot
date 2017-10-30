@@ -37,22 +37,38 @@ def say_status *args
 end
 
 def with_file file, delete_on_fail: false
-  existed = File.exists? file
+  org = File.exists?(file) ? open(file, &:read) : nil
+  cur = nil
+  updated = false
   begin
-    open(file, 'w') { |io| io << yield }
+    cur = yield
+    lift =
+      if File.extname(file) == '.json'
+        ->(x) { x && JSON.load(x) }
+      else
+        ->(x) { x }
+      end
+    if lift.(org) != lift.(cur)
+      open(file, 'w') { |io| io << cur }
+      updated = true
+    end
   rescue => err
     if delete_on_fail
-      File.delete file if existed
+      File.delete file if org
+      cur = nil
     else
       raise err
     end
   end
-  existing = File.exists? file
-  if existed && existing
-    say_status :update, file, :yellow
-  elsif existed
+  if org && cur
+    if updated
+      say_status :update, file, :blue
+    else
+      say_status :identical, file, :yellow
+    end
+  elsif org
     say_status :remove, file, :magenta
-  elsif existing
+  elsif cur
     say_status :create, file, :green
   end
 end
