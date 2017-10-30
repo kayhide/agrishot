@@ -1,3 +1,2 @@
 require('../output/Main').main();
-
-require('./styles.css');
+require('../static/styles.css');

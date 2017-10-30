@@ -1,17 +1,20 @@
 const path = require('path');
 const webpack = require('webpack');
 const HtmlPlugin = require('html-webpack-plugin');
-const CleanPlugin = require('clean-webpack-plugin');
+const CleanupPlugin = require('webpack-cleanup-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
+const StaticSiteGeneratorPlugin = require('static-site-generator-webpack-plugin');
 
 module.exports = {
   entry: {
-    'app': './src/entry.js'
+    admin: './src/entry.js',
+    static: './static/entry.js'
   },
 
   output: {
     filename: '[name].js',
-    path: path.resolve(__dirname, 'dist')
+    path: path.resolve(__dirname, 'dist'),
+    libraryTarget: 'umd'
   },
 
   module: {
@@ -22,15 +25,42 @@ module.exports = {
           fallback: 'style-loader',
           use: 'css-loader'
         })
+      },
+      {
+        test: /\.html$/,
+        use: [
+          {
+            loader: 'html-loader',
+            options: {
+              interpolate: true
+            }
+          },
+        ]
+      },
+      {
+        test: /\.md$/,
+        use: [
+          {
+            loader: 'html-loader'
+          },
+          {
+            loader: 'markdown-loader'
+          }
+        ]
       }
     ]
   },
 
   plugins: [
-    new CleanPlugin(['dist']),
+    new ExtractTextPlugin('styles.css'),
     new HtmlPlugin({
-      title: 'Agrishot'
+      title: 'Agrishot',
+      filename: 'admin.html',
+      chunks: ['admin']
     }),
-    new ExtractTextPlugin('styles.css')
-  ],
+    new StaticSiteGeneratorPlugin({
+      entry: 'static'
+    }),
+    new CleanupPlugin()
+  ]
 };
