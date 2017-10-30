@@ -4,7 +4,7 @@ require 'thor/shell'
 require 'pry'
 
 $root_dir = __dir__
-$stage = ENV['stage'] || 'dev'
+$stage = ENV.fetch('STAGE', 'dev')
 $env_file = "../.env.#{$stage}.yml"
 $app_name = "agrishot-#{$stage}"
 $profile = "#{$app_name}-deploy"
@@ -90,19 +90,9 @@ namespace :s3 do
   endpoint = File.join(dst_dir, 'endpoint.txt')
   bucket_uri = "s3://#{$bucket_name}"
 
-  file endpoint do
-    aws ['s3', 'mb',  bucket_uri].join(' ')
-    region = aws ['configure', 'get', 'region'].join(' ')
-    open(endpoint, 'w') { |io| io << "http://#{$bucket_name}.s3-website-#{region}.amazonaws.com" }
-  end
+  file endpoint => :pull
 
-  desc 'Create S3 bucket'
-  task :create => [endpoint] do
-    aws ['s3', 'website',
-         '--index-document', 'index.html',
-         '--error-document', 'error.html',
-         bucket_uri].join(' ')
-  end
+  directory dst_dir
 
   desc 'Deploy public web to S3 bucket'
   task :deploy => [endpoint] do
@@ -111,7 +101,7 @@ namespace :s3 do
          '--acl', 'public-read'].join(' ')
   end
 
-  task :pull do
+  task :pull => [dst_dir] do
     with_file endpoint, delete_on_fail: true do
       res = aws ['s3api', 'get-bucket-location',
                  '--bucket', $bucket_name].join(' ')
