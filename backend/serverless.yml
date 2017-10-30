@@ -69,6 +69,7 @@ functions:
 
   recognize:
     handler: app/handler.recognize
+    timeout: 10
     events:
       - stream:
           type: dynamodb
@@ -92,10 +93,32 @@ resources:
           -
             AttributeName: id
             AttributeType: S
+          -
+            AttributeName: sender_id
+            AttributeType: S
+          -
+            AttributeName: created_at
+            AttributeType: N
         KeySchema:
           -
             AttributeName: id
             KeyType: HASH
+        GlobalSecondaryIndexes:
+          -
+            IndexName: ${self:provider.environment.RESOURCE_PREFIX}photos-sender_id-created_at
+            KeySchema:
+              -
+                AttributeName: sender_id
+                KeyType: HASH
+              -
+                AttributeName: created_at
+                KeyType: RANGE
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+
     PhotosS3Bucket:
       Type: 'AWS::S3::Bucket'
       # DeletionPolicy: Retain
