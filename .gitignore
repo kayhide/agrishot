@@ -6,7 +6,7 @@ tmp/*
 
 frontend/.psc-ide-port
 frontend/.wrk
-frontend/dist/app.js
+frontend/dist
 
 
 # package directories
