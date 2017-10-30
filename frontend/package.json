@@ -3,14 +3,14 @@
   "scripts": {
     "build": "pulp browserify --to dist/app.js",
     "watch": "pulp -w browserify --to dist/app.js",
-    "watch-fast": "webpack --entry ./entry.js --output-filename dist/app.js --watch",
+    "watch-fast": "webpack --watch",
     "browse": "live-server dist --watch *.js,*.css,*.html --igrnoe .*",
     "dev": "concurrently \"yarn run watch-fast\" \"yarn run browse\""
   },
   "devDependencies": {
     "concurrently": "^3.5.0",
     "live-server": "^1.2.0",
-    "webpack": "^3.6.0"
+    "webpack": "^3.8.1"
   },
   "dependencies": {
     "aws-sdk": "^2.132.0"
