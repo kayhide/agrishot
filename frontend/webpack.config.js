@@ -65,6 +65,7 @@ module.exports = {
     new HtmlPlugin({
       title: 'Agrishot',
       filename: 'admin.html',
+      favicon: 'static/favicon.ico',
       chunks: ['admin']
     }),
     new StaticSiteGeneratorPlugin({
