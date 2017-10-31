@@ -9,9 +9,6 @@ Statement:
   - dynamodb:PutItem
   - dynamodb:Query
   - dynamodb:UpdateItem
+  - dynamodb:Scan
   Resource:
   - <%= table_arn %>
-  Condition:
-    ForAllValues:StringEquals:
-      dynamodb:LeadingKeys:
-      - "${cognito-identity.amazonaws.com:sub}"

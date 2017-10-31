@@ -14,12 +14,14 @@ helper.verifyStage(process.env.STAGE);
 module.exports = {
   entry: {
     admin: './src/entry.js',
-    static: './static/entry.js'
+    static: './static/entry.js',
+    Agrishot: './src/agrishot.js'
   },
 
   output: {
     filename: '[name].js',
     path: path.resolve(__dirname, 'dist', process.env.STAGE),
+    library: '[name]',
     libraryTarget: 'umd'
   },
 
