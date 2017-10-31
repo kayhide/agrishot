@@ -3,6 +3,8 @@
 const co = require('co');
 const helper = require('../lib/helper');
 
+process.env.STAGE = 'test';
+
 function initEnv(env) {
   let org = Object.assign({}, process.env);
 
@@ -20,7 +22,7 @@ let config;
 
 before((done) => {
   co(function *() {
-    config = yield helper.readConfig('test');
+    config = yield helper.readConfig();
     initEnv(config.provider.environment);
     done();
   });

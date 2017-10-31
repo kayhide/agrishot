@@ -3,18 +3,21 @@ require 'json'
 require 'thor/shell'
 require 'pry'
 
-$root_dir = __dir__
 $stage = ENV.fetch('STAGE', 'dev')
+raise RuntimeError.new("Invalid STAGE: #{$stage}") unless %w(dev prod).include?($stage)
+
+$root_dir = __dir__
+$dist_dir = "dist/#{$stage}"
+$config_dir = 'config'
+$wrk_dir = '.wrk'
 $env_file = "../.env.#{$stage}.yml"
+
 $app_name = "agrishot-#{$stage}"
 $profile = "#{$app_name}-deploy"
 $bucket_name = "#{$app_name}-web"
 $table_name = "#{$app_name}-photos"
 $identity_pool_name = $app_name.gsub(/-/, '_')
 $authenticated_role_name = "#{$app_name}-AuthenticatedRole"
-$dist_dir = 'dist'
-$config_dir = 'config'
-$wrk_dir = '.wrk'
 
 Dir.chdir $root_dir
 
@@ -76,10 +79,11 @@ end
 
 desc 'Display info'
 task :info do
-  puts "Root dir: #{$root_dir}"
   puts "Stage: #{$stage}"
   puts "App name: #{$app_name}"
   puts "Profile: #{$profile}"
+  puts "Root dir: #{$root_dir}"
+  puts "Dist dir: #{$dist_dir}"
   endpoint = "#{$wrk_dir}/s3/#{$bucket_name}/endpoint.txt"
   if File.exists? endpoint
     puts "Endpoint: #{File.read endpoint}"

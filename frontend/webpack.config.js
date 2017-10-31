@@ -1,9 +1,15 @@
+const _ = require('lodash');
 const path = require('path');
 const webpack = require('webpack');
 const HtmlPlugin = require('html-webpack-plugin');
 const CleanupPlugin = require('webpack-cleanup-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const StaticSiteGeneratorPlugin = require('static-site-generator-webpack-plugin');
+
+const helper = require('./lib/helper');
+
+process.env.STAGE = process.env.STAGE || 'dev';
+helper.verifyStage(process.env.STAGE);
 
 module.exports = {
   entry: {
@@ -13,7 +19,7 @@ module.exports = {
 
   output: {
     filename: '[name].js',
-    path: path.resolve(__dirname, 'dist'),
+    path: path.resolve(__dirname, 'dist', process.env.STAGE),
     libraryTarget: 'umd'
   },
 
@@ -52,6 +58,9 @@ module.exports = {
   },
 
   plugins: [
+    new webpack.DefinePlugin({
+      ENV: _.mapValues(helper.readPublicEnv(process.env.STAGE), JSON.stringify)
+    }),
     new ExtractTextPlugin('styles.css'),
     new HtmlPlugin({
       title: 'Agrishot',

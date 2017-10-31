@@ -3,7 +3,7 @@
 ### NPM modules
 
 ```sh
-yarn install
+$ yarn install
 ```
 
 ## Running dev server
@@ -32,4 +32,20 @@ Somehow pscid does not work via yarn script, start it directly.
 
 ```sh
 $ pscid
+```
+
+## Build and deploy
+
+First, we need to compile purescript modules using `pulp` command.
+
+Then, we collect generated js and integrate them to a site along with static pages by `webpack`.
+
+```sh
+$ yarn run build 
+```
+
+To deploy to AWS S3 bucket, use rake take.
+
+```sh
+$ rake s3:deploy
 ```

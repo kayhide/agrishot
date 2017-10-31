@@ -12,10 +12,10 @@ const AWS = require('aws-sdk');
 const Localstack = require('./localstack');
 
 module.exports = {
-  readConfig(stage) {
+  readConfig() {
     const sls = new Serverless();
     return sls.service.load().then(() => {
-      return sls.variables.populateService({ stage });
+      return sls.variables.populateService();
     }).then(() => {
       return Promise.resolve(sls.service);
     });
