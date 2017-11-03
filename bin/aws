@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+abspath="$(cd "${0%/*}" 2>/dev/null; echo "$PWD")"
+app_name=$(basename "$(dirname "$abspath")")
+
+profile="${app_name}-${STAGE:-dev}-deploy"
+
+bin=$(which -a aws | tail -n 2  | head -n 1)
+cmd=""${bin}" --profile "${profile}" "$@""
+
+GRAY='\033[0;30m'
+NO_COLOR='\033[0m'
+
+echo "Profile: $profile"
+echo -e "${GRAY}$ "${cmd}"${NO_COLOR}"
+
+$cmd
