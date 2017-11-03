@@ -44,8 +44,14 @@ Then, we collect generated js and integrate them to a site along with static pag
 $ yarn run build 
 ```
 
-To deploy to AWS S3 bucket, use rake take.
+To deploy built site to AWS S3 bucket:
 
 ```sh
-$ rake s3:deploy
+$ yarn run deploy
+```
+
+For `prod` stage:
+
+```sh
+$ STAGE=prod yarn run deploy
 ```

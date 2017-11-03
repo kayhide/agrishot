@@ -79,3 +79,9 @@ To deploy:
 ```sh
 $ yarn run deploy
 ```
+
+For `prod` stage:
+
+```sh
+$ STAGE=prod yarn run deploy
+```

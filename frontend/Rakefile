@@ -137,7 +137,9 @@ namespace :s3 do
   task :deploy => [endpoint] do
     aws ['s3', 'sync',
          "#{$dist_dir}/", bucket_uri,
-         '--acl', 'public-read'].join(' ')
+         '--acl', 'public-read',
+         '--delete'
+        ].join(' ')
   end
 
   task :pull do

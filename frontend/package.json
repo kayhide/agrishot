@@ -1,10 +1,7 @@
 {
   "private": true,
-  "scripts": {
-    "build": "pulp build && webpack",
-    "watch": "webpack --watch",
-    "browse": "live-server dist/dev --host=localhost --port=3000 --watch *.js,*.css,*.html --ignore .*",
-    "dev": "concurrently \"yarn run watch\" \"yarn run browse\""
+  "dependencies": {
+    "aws-sdk": "^2.132.0"
   },
   "devDependencies": {
     "concurrently": "^3.5.0",
@@ -18,7 +15,11 @@
     "webpack": "^3.8.1",
     "webpack-cleanup-plugin": "^0.5.1"
   },
-  "dependencies": {
-    "aws-sdk": "^2.132.0"
+  "scripts": {
+    "build": "pulp build && webpack",
+    "watch": "webpack --watch",
+    "browse": "live-server dist/dev --host=localhost --port=3000 --watch *.js,*.css,*.html --ignore .*",
+    "dev": "concurrently \"yarn run watch\" \"yarn run browse\"",
+    "deploy": "rake s3:deploy"
   }
 }
