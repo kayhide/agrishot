@@ -12,9 +12,12 @@ $config_dir = 'config'
 $wrk_dir = '.wrk'
 $env_file = "../.env.#{$stage}.yml"
 
-$app_name = "agrishot-#{$stage}"
+$app_basename = 'agrishot'
+$app_name = "#{$app_basename}-#{$stage}"
 $profile = "#{$app_name}-deploy"
-$bucket_name = "#{$app_name}-web"
+$domain_prefix = ($stage == 'prod') ? 'www' : "www-#{$stage}"
+$domain = "#{$domain_prefix}.#{$app_basename}.com"
+$bucket_name = $domain
 $table_name = "#{$app_name}-photos"
 $identity_pool_name = $app_name.gsub(/-/, '_')
 $authenticated_role_name = "#{$app_name}-AuthenticatedRole"
@@ -51,7 +54,9 @@ def with_file file, delete_on_fail: false
       else
         ->(x) { x }
       end
-    if lift.(org) != lift.(cur)
+    if lift.(org) == lift.(cur)
+      FileUtils.touch file
+    else
       open(file, 'w') { |io| io << cur }
       updated = true
     end
@@ -84,6 +89,7 @@ task :info do
   puts "Profile: #{$profile}"
   puts "Root dir: #{$root_dir}"
   puts "Dist dir: #{$dist_dir}"
+  puts "Domain: #{$domain}"
   endpoint = "#{$wrk_dir}/s3/#{$bucket_name}/endpoint.txt"
   if File.exists? endpoint
     puts "Endpoint: #{File.read endpoint}"
@@ -99,7 +105,8 @@ task :browse do
   unless File.exists? endpoint
     raise RuntimeError.new "#{endpoint} is not found"
   end
-  sh "open #{File.read endpoint}"
+  url = File.read(endpoint).sub(/\.s3-website.*amazonaws.com$/, '')
+  sh "open #{url}"
 end
 
 desc 'Retrieve infomations from AWS'
@@ -110,9 +117,21 @@ namespace :s3 do
   endpoint = File.join(dst_dir, 'endpoint.txt')
   bucket_uri = "s3://#{$bucket_name}"
 
-  file endpoint => :pull
-
   directory dst_dir
+
+  file endpoint => dst_dir do
+    aws ['s3', 'mb',  bucket_uri].join(' ')
+    region = aws ['configure', 'get', 'region'].join(' ').chomp
+    open(endpoint, 'w') { |io| io << "http://#{$bucket_name}.s3-website-#{region}.amazonaws.com" }
+  end
+
+  desc 'Create S3 bucket'
+  task :create => [endpoint] do
+    aws ['s3', 'website',
+         '--index-document', 'index.html',
+         '--error-document', 'error.html',
+         bucket_uri].join(' ')
+  end
 
   desc 'Deploy public web to S3 bucket'
   task :deploy => [endpoint] do
@@ -121,7 +140,7 @@ namespace :s3 do
          '--acl', 'public-read'].join(' ')
   end
 
-  task :pull => [dst_dir] do
+  task :pull do
     with_file endpoint, delete_on_fail: true do
       res = aws ['s3api', 'get-bucket-location',
                  '--bucket', $bucket_name].join(' ')

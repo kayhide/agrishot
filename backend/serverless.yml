@@ -132,12 +132,3 @@ resources:
               AllowedOrigins:
                 - "*"
 
-    WebS3Bucket:
-      Type: 'AWS::S3::Bucket'
-      Properties:
-        BucketName: ${self:provider.environment.RESOURCE_PREFIX}web
-        AccessControl: PublicRead
-        WebsiteConfiguration:
-          IndexDocument: index.html
-          ErrorDocument: error.html
-
