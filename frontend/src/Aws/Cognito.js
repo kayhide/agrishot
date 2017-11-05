@@ -2,14 +2,10 @@
 
 const AWS = require('aws-sdk');
 
-var client;
+let client;
 
-exports.setup = function(conf) {
-  return function () {
-    console.log('setup is called');
-    console.log(conf);
-    client = new AWS.DynamoDB.DocumentClient(conf);
-  };
+exports._setup = function(conf) {
+  client = new AWS.DynamoDB.DocumentClient(conf);
 };
 
 exports._scan = function() {

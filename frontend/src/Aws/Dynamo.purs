@@ -8,6 +8,8 @@ import Control.Monad.Eff (kind Effect, Eff)
 
 foreign import data DYNAMO :: Effect
 
+foreign import setup :: forall eff. AwsConfig -> Eff (dynamo :: DYNAMO | eff) Unit
+
 foreign import _scan :: forall eff a. AwsConfig -> ScanOptions -> ((ScanResult a) -> Eff eff Unit) -> Eff eff Unit
 
 scan :: forall eff a. AwsConfig -> ScanOptions -> Aff (dynamo :: DYNAMO | eff) (ScanResult a)
