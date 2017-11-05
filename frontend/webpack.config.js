@@ -1,7 +1,6 @@
 const _ = require('lodash');
 const path = require('path');
 const webpack = require('webpack');
-const HtmlPlugin = require('html-webpack-plugin');
 const CleanupPlugin = require('webpack-cleanup-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const StaticSiteGeneratorPlugin = require('static-site-generator-webpack-plugin');
@@ -64,12 +63,6 @@ module.exports = {
       ENV: _.mapValues(helper.readPublicEnv(process.env.STAGE), JSON.stringify)
     }),
     new ExtractTextPlugin('styles.css'),
-    new HtmlPlugin({
-      title: 'Agrishot',
-      filename: 'admin.html',
-      favicon: 'static/favicon.ico',
-      chunks: ['admin']
-    }),
     new StaticSiteGeneratorPlugin({
       entry: 'static'
     }),
