@@ -2,29 +2,47 @@
 
 const AWS = require('aws-sdk');
 
-let client;
-
-exports._setup = function(conf) {
-  client = new AWS.DynamoDB.DocumentClient(conf);
+var conf = {};
+var params = {
+  IdentityPoolId: null,
+  Logins: {}
 };
 
-exports._scan = function() {
-  return function(params) {
-    return function(onSuccess) {
-      return function() {
-        client.scan(params, function(err, data) {
-          console.log('scan is called');
-          console.log(params);
-          if (err) {
-            throw new Error(err);
-          }
-          else {
-            console.log('successed');
-            console.log(data);
-            onSuccess(data)();
-          }
-        });
-      };
-    };
+exports.setRegion = function(region) {
+  return function() {
+    conf.region = region;
   };
+}
+
+exports.setIdentityPoolId = function(id) {
+  return function () {
+    params.IdentityPoolId = id;
+  };
+}
+
+exports.setFacebookToken = function(token) {
+  return function () {
+    params.Logins['graph.facebook.com'] = token;
+  };
+}
+
+exports._authenticate = function(onSuccess) {
+  return function() {
+    console.log(params);
+    console.log(conf);
+    var credentials = new AWS.CognitoIdentityCredentials(params, conf);
+    credentials.get(function(err) {
+      if (err) {
+        throw new Error(err);
+      }
+      else {
+        onSuccess(
+          new AWS.Config({
+            region: conf.region,
+            credentials: credentials
+          })
+        )();
+      }
+    });
+  }
 };

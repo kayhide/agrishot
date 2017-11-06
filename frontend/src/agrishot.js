@@ -46,22 +46,24 @@ module.exports = {
   updateCognito(authResponse) {
     console.log('You are now logged in');
     console.log(JSON.stringify(authResponse));
+    const region = 'ap-northeast-1';
 
-    AWS.config.update({
-      region: 'ap-northeast-1',
+    var conf = new AWS.Config();
+    conf.update({
+      region,
       credentials: new AWS.CognitoIdentityCredentials({
         IdentityPoolId: ENV.AWS_IDENTITY_POOL_ID,
         Logins: {
           'graph.facebook.com': authResponse.accessToken
         }
-      })
+      }, { region })
     });
-    AWS.config.credentials.get(() => {
-      if (AWS.config.credentials.expired) {
+    conf.credentials.get((err) => {
+      if (conf.credentials.expired) {
         console.log("Failed to authenticate");
         return;
       }
-      const db = new AWS.DynamoDB.DocumentClient();
+      const db = new AWS.DynamoDB.DocumentClient(conf);
       const params = { TableName: 'agrishot-dev-photos' };
       db.scan(params, function(err, data) {
         console.log('scan is called');

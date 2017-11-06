@@ -2,7 +2,8 @@ module Component.DynamoUI where
 
 import Prelude
 
-import Aws.Dynamo (DYNAMO, AwsConfig, scan)
+import Aws.Config (AwsConfig)
+import Aws.Dynamo (DYNAMO, scan)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (runExcept, throwError)
@@ -29,8 +30,8 @@ data Query a = Scan a
 
 type TableName = String
 
-ui :: forall eff.
-      AwsConfig ->
+ui :: forall c eff.
+      AwsConfig c ->
       TableName ->
       H.Component HH.HTML Query Unit Void (Aff (dynamo :: DYNAMO | eff))
 ui awsConfig tableName =
