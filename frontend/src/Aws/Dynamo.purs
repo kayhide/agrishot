@@ -11,12 +11,12 @@ foreign import data DYNAMO :: Effect
 
 foreign import setup :: forall c eff. AwsConfig c -> Eff (dynamo :: DYNAMO | eff) Unit
 
-foreign import _scan :: forall c eff a. AwsConfig c -> ScanOptions -> ((ScanResult a) -> Eff eff Unit) -> Eff eff Unit
+foreign import _scan :: forall eff a. ScanOptions -> ((ScanResult a) -> Eff eff Unit) -> Eff eff Unit
 
-scan :: forall c eff a. AwsConfig c -> ScanOptions -> Aff (dynamo :: DYNAMO | eff) (ScanResult a)
-scan conf opts = makeAff callback
+scan :: forall eff a. ScanOptions -> Aff (dynamo :: DYNAMO | eff) (ScanResult a)
+scan opts = makeAff callback
   where
-    callback _ onSuccess = _scan conf opts onSuccess
+    callback _ onSuccess = _scan opts onSuccess
 
 
 type ScanOptions =

@@ -2,15 +2,12 @@ module Component.DynamoUI where
 
 import Prelude
 
-import Aws.Config (AwsConfig)
 import Aws.Dynamo (DYNAMO, scan)
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (runExcept, throwError)
 import Data.Array as Array
-import Data.DateTime (DateTime(..))
 import Data.Either (Either(..), either)
-import Data.Foreign (Foreign)
 import Data.Foreign.Class (decode)
 import Data.Formatter.DateTime (formatDateTime)
 import Data.List.NonEmpty as NEL
@@ -30,11 +27,10 @@ data Query a = Scan a
 
 type TableName = String
 
-ui :: forall c eff.
-      AwsConfig c ->
+ui :: forall eff.
       TableName ->
       H.Component HH.HTML Query Unit Void (Aff (dynamo :: DYNAMO | eff))
-ui awsConfig tableName =
+ui tableName =
   H.component
     { initialState: const initialState
     , render
@@ -72,14 +68,13 @@ ui awsConfig tableName =
 
   eval :: Query ~> H.ComponentDSL State Query Void (Aff (dynamo :: DYNAMO | eff))
   eval (Scan next) = do
-    res <- H.liftAff $ scan awsConfig opts
+    res <- H.liftAff $ scan opts
     photos <- H.liftAff $ getItems res."Items"
     H.put photos
     pure next
     where
       opts = { "TableName": tableName }
 
-      getItems :: forall eff. Array Foreign -> Aff eff (Array Photo)
       getItems objs =
         case runExcept (traverse decode objs) of
           Right xs -> pure xs

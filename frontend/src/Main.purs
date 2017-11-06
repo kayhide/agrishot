@@ -23,7 +23,8 @@ import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
 
 type AppConfig =
-  { facebookAppId :: String
+  { stage :: String
+  , facebookAppId :: String
   , awsRegion :: String
   , awsIdentityPoolId :: String
   }
@@ -44,19 +45,19 @@ main = HA.runHalogenAff do
       liftEff $ Cognito.setIdentityPoolId config.awsIdentityPoolId
       FB.AccessToken token <- loginFacebook $ FB.defaultConfig config.facebookAppId
       liftEff $ Cognito.setFacebookToken token
-      conf <- Cognito.authenticate
-      liftEff $ Dynamo.setup conf
-      pure $ DynamoUI.ui conf "agrishot-dev-photos"
+      liftEff <<< Dynamo.setup =<< Cognito.authenticate
+      pure $ DynamoUI.ui $ "agrishot-" <> config.stage <> "-photos"
 
 
 readConfig :: forall eff. Eff (meta :: META, exception :: EXCEPTION | eff) AppConfig
 readConfig = do
+  stage <- Meta.get "STAGE"
   facebookAppId <- Meta.get "FACEBOOK_APP_ID"
   awsIdentityPoolId <- Meta.get "AWS_IDENTITY_POOL_ID"
   let region = Array.head $ split (Pattern ":") awsIdentityPoolId
   case region of
     Just awsRegion ->
-      pure $ { facebookAppId, awsRegion, awsIdentityPoolId }
+      pure $ { stage, facebookAppId, awsRegion, awsIdentityPoolId }
     Nothing ->
       liftEff $ throwException $ error $ "Bad aws identity pool id"
 

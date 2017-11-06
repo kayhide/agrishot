@@ -60,6 +60,7 @@ module.exports = {
 
   plugins: [
     new webpack.DefinePlugin({
+      STAGE: JSON.stringify(process.env.STAGE),
       ENV: _.mapValues(helper.readPublicEnv(process.env.STAGE), JSON.stringify)
     }),
     new ExtractTextPlugin('styles.css'),
