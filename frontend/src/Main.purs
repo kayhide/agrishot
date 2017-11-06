@@ -25,19 +25,29 @@ dynamoAwsConfig =
   , secretAccessKey: "xxxx"
   }
 
+type AppConfig =
+  { facebookAppId :: String
+  , awsIdentityPoolId :: String
+  }
+
 main :: Eff (HA.HalogenEffects (dynamo :: DYNAMO, meta :: META, console :: CONSOLE)) Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
-  facebook_app_id <- liftEff $ Meta.get "FACEBOOK_APP_ID"
-  logShow facebook_app_id
-  initFacebook $ FB.defaultConfig facebook_app_id
+  config <- liftEff readConfig
+  initFacebook $ FB.defaultConfig config.facebookAppId
   liftEff $ Dynamo.setup dynamoAwsConfig
   io <- runUI ui unit body
   io.query $ action DynamoUI.Scan
   where
     ui = DynamoUI.ui dynamoAwsConfig "agrishot-test-photos"
 
-initFacebook :: forall e. FB.Config -> Aff (console :: CONSOLE | e) Unit
+readConfig :: forall eff. Eff (meta :: META, exception :: EXCEPTION | eff) AppConfig
+readConfig = do
+  facebookAppId <- Meta.get "FACEBOOK_APP_ID"
+  awsIdentityPoolId <- Meta.get "AWS_IDENTITY_POOL_ID"
+  pure $ { facebookAppId, awsIdentityPoolId }
+
+initFacebook :: forall eff. FB.Config -> Aff (console :: CONSOLE | eff) Unit
 initFacebook config = do
   sdk <- FB.init config
   info <- FB.loginStatus sdk
