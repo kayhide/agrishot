@@ -28,19 +28,26 @@ type AppConfig =
   , awsIdentityPoolId :: String
   }
 
-main :: Eff (HA.HalogenEffects (meta :: META, cognito :: COGNITO, dynamo :: DYNAMO, console :: CONSOLE)) Unit
+type AppEffs = HA.HalogenEffects (meta :: META, cognito :: COGNITO, dynamo :: DYNAMO, console :: CONSOLE)
+
+main :: Eff AppEffs Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
-  config <- liftEff readConfig
-  liftEff $ Cognito.setRegion config.awsRegion
-  liftEff $ Cognito.setIdentityPoolId config.awsIdentityPoolId
-  FB.AccessToken token <- loginFacebook $ FB.defaultConfig config.facebookAppId
-  liftEff $ Cognito.setFacebookToken token
-  conf <- Cognito.authenticate
-  liftEff $ Dynamo.setup conf
-  let ui = DynamoUI.ui conf "agrishot-dev-photos"
+  ui <- initApp
   io <- runUI ui unit body
   io.query $ action DynamoUI.Scan
+
+  where
+    initApp = do
+      config <- liftEff readConfig
+      liftEff $ Cognito.setRegion config.awsRegion
+      liftEff $ Cognito.setIdentityPoolId config.awsIdentityPoolId
+      FB.AccessToken token <- loginFacebook $ FB.defaultConfig config.facebookAppId
+      liftEff $ Cognito.setFacebookToken token
+      conf <- Cognito.authenticate
+      liftEff $ Dynamo.setup conf
+      pure $ DynamoUI.ui conf "agrishot-dev-photos"
+
 
 readConfig :: forall eff. Eff (meta :: META, exception :: EXCEPTION | eff) AppConfig
 readConfig = do
