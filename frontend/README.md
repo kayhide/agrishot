@@ -27,8 +27,8 @@ This script starts 2 servers:
 - `live-server` for browser auto reloading
 
 To make bundling work, we need to compile par file.
-For this, we use pscid.
-Somehow pscid does not work via yarn script, start it directly.
+For this, use psc-ide via editor's support.
+Or use pscid from console.
 
 ```sh
 $ pscid
