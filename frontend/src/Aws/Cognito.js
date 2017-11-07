@@ -26,23 +26,25 @@ exports.setFacebookToken = function(token) {
   };
 }
 
-exports._authenticate = function(onSuccess) {
-  return function() {
-    console.log(params);
-    console.log(conf);
-    var credentials = new AWS.CognitoIdentityCredentials(params, conf);
-    credentials.get(function(err) {
-      if (err) {
-        throw new Error(err);
-      }
-      else {
-        onSuccess(
-          new AWS.Config({
-            region: conf.region,
-            credentials: credentials
-          })
-        )();
-      }
-    });
-  }
+exports._authenticate = function(onError, onSuccess) {
+  console.log(params);
+  console.log(conf);
+  var credentials = new AWS.CognitoIdentityCredentials(params, conf);
+  credentials.get(function(err) {
+    if (err) {
+      onError(err);
+    }
+    else {
+      onSuccess(
+        new AWS.Config({
+          region: conf.region,
+          credentials: credentials
+        })
+      );
+    }
+  });
+
+  return function(cancelError, cancelerError, cancelerSuccess) {
+    cancelerSuccess();
+  };
 };
