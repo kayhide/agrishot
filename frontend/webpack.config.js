@@ -3,25 +3,25 @@ const path = require('path');
 const webpack = require('webpack');
 const CleanupPlugin = require('webpack-cleanup-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
-const StaticSiteGeneratorPlugin = require('static-site-generator-webpack-plugin');
+const HtmlPlugin = require('html-webpack-plugin');
 
 const helper = require('./lib/helper');
 
 process.env.STAGE = process.env.STAGE || 'dev';
 helper.verifyStage(process.env.STAGE);
 
+const output_dir = path.resolve(__dirname, 'dist', process.env.STAGE)
+
 module.exports = {
   entry: {
     admin: './src/entry.js',
-    static: './static/entry.js',
-    Agrishot: './src/agrishot.js'
+    index: './src/index.js',
+    privacy_policy: './static/static.js'
   },
 
   output: {
-    filename: '[name].js',
-    path: path.resolve(__dirname, 'dist', process.env.STAGE),
-    library: '[name]',
-    libraryTarget: 'umd'
+    filename: '[name].[hash].js',
+    path: output_dir
   },
 
   module: {
@@ -63,9 +63,21 @@ module.exports = {
       STAGE: JSON.stringify(process.env.STAGE),
       ENV: _.mapValues(helper.readPublicEnv(process.env.STAGE), JSON.stringify)
     }),
-    new ExtractTextPlugin('styles.css'),
-    new StaticSiteGeneratorPlugin({
-      entry: 'static'
+    new ExtractTextPlugin('styles.[hash].css'),
+    new HtmlPlugin({
+      filename: 'admin.html',
+      template: 'static/admin.html',
+      chunks: ['admin']
+    }),
+    new HtmlPlugin({
+      filename: 'index.html',
+      template: 'static/index.html',
+      chunks: ['index']
+    }),
+    new HtmlPlugin({
+      filename: 'privacy_policy.html',
+      template: 'static/privacy_policy.html',
+      chunks: ['privacy_policy']
     }),
     new CleanupPlugin()
   ]

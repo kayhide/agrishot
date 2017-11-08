@@ -4,29 +4,18 @@
     <meta charset="UTF-8">
     <title>Agrishot</title>
     <link rel="shortcut icon" href="favicon.ico">
-    <link href="styles.css" rel="stylesheet">
   </head>
   <body>
     Agrishot coming soon...
-    <script>
-     window.fbAsyncInit = function() {
-       FB.init({
-         appId      : '${ENV.FACEBOOK_APP_ID}',
-         xfbml      : true,
-         version    : 'v2.1'
-       });
-       FB.AppEvents.logPageView();
-       Agrishot.checkLoginState();
-     };
-     // Load the SDK asynchronously
-     (function(d, s, id) {
-       var js, fjs = d.getElementsByTagName(s)[0];
-       if (d.getElementById(id)) return;
-       js = d.createElement(s); js.id = id;
-       js.src = "//connect.facebook.net/en_US/sdk.js";
-       fjs.parentNode.insertBefore(js, fjs);
-     }(document, 'script', 'facebook-jssdk'));
-    </script>
+
+    <ul>
+      <li>
+        <a href="admin.html">Agrishot Admin</a>
+      </li>
+      <li>
+        <a href="privacy_policy.html">Privacy Policy</a>
+      </li>
+    </ul>
 
     <div style="float:right">
       <fb:login-button scope="public_profile,email" onlogin="Agrishot.checkLoginState();">
@@ -38,7 +27,5 @@
 
     <div id="status-aws">
     </div>
-
-    <script type="text/javascript" src="Agrishot.js"></script>
   </body>
 </html>
