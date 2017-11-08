@@ -135,6 +135,7 @@ namespace :s3 do
 
   desc 'Deploy public web to S3 bucket'
   task :deploy => [endpoint] do
+    say_status :deploy, bucket_uri, :green
     aws ['s3', 'sync',
          "#{$dist_dir}/", bucket_uri,
          '--acl', 'public-read',
@@ -238,6 +239,15 @@ namespace :dynamodb do
 
   src_of = ->(dst) { File.join($config_dir, dst.pathmap('%n.yml')) }
 
+  directory dst_dir
+
+  file table_info => [dst_dir] do |t|
+    with_file table_info do
+      aws ['dynamodb', 'describe-table',
+           '--table-name', $table_name].join(' ')
+    end
+  end
+
   file table_role_policy => [table_info, src_of.(table_role_policy)] do |t|
     src = t.prerequisites.last
     info = JSON.load File.open(table_info)
@@ -261,6 +271,7 @@ namespace :dynamodb do
     end
   end
 
+  desc 'Put role policy of table access to authenticated role'
   task :put_role_policy => [table_role_info]
 
   task :pull do
