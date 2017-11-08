@@ -25,7 +25,8 @@ $authenticated_role_name = "#{$app_name}-AuthenticatedRole"
 Dir.chdir $root_dir
 
 def aws cmd
-  res = `aws --profile #{$profile} #{cmd}`
+  bin = `which -a aws`.split.reject { |f| f.start_with? '.' }.first
+  res = `#{bin} --profile #{$profile} #{cmd}`
   unless $?.success?
     raise RuntimeError.new cmd
   end
@@ -90,12 +91,16 @@ task :info do
   puts "Root dir: #{$root_dir}"
   puts "Dist dir: #{$dist_dir}"
   puts "Domain: #{$domain}"
+
   endpoint = "#{$wrk_dir}/s3/#{$bucket_name}/endpoint.txt"
-  if File.exists? endpoint
-    puts "Endpoint: #{File.read endpoint}"
-  else
-    puts "Endpoint: "
-  end
+  puts "Endpoint: " + (File.exists?(endpoint) && File.read(endpoint) || '')
+
+  identity_pool_info = File.join($wrk_dir, 'cognito/identity_pool', $identity_pool_name, 'identity_pool_info.json')
+  identity_pool_id =
+    if File.exists?(endpoint)
+      JSON.load(File.open(identity_pool_info))['IdentityPoolId']
+    end
+  puts "Identity pool id: #{identity_pool_id}"
 end
 
 desc 'Open browser'
