@@ -12,6 +12,15 @@ helper.verifyStage(process.env.STAGE);
 
 const output_dir = path.resolve(__dirname, 'dist', process.env.STAGE)
 
+const nameWith = (env => {
+  if (env === 'prod') {
+    return (pre, suf) => `${pre}.[hash]${suf}`;
+  } else {
+    return (pre, suf) => `${pre}${suf}`;
+  };
+}) (process.env.STAGE);
+
+
 module.exports = {
   entry: {
     admin: './src/entry.js',
@@ -20,7 +29,7 @@ module.exports = {
   },
 
   output: {
-    filename: '[name].[hash].js',
+    filename: nameWith('[name]', '.js'),
     path: output_dir
   },
 
@@ -63,7 +72,7 @@ module.exports = {
       STAGE: JSON.stringify(process.env.STAGE),
       ENV: _.mapValues(helper.readPublicEnv(process.env.STAGE), JSON.stringify)
     }),
-    new ExtractTextPlugin('styles.[hash].css'),
+    new ExtractTextPlugin(nameWith('styles', '.css')),
     new HtmlPlugin({
       filename: 'admin.html',
       template: 'static/admin.html',
