@@ -1,4 +1,4 @@
-module Component.DynamoUI where
+module Component.PhotoListUI where
 
 import Prelude
 
@@ -11,7 +11,6 @@ import Data.Either (Either(..), either)
 import Data.Foreign.Class (decode)
 import Data.Formatter.DateTime (formatDateTime)
 import Data.List.NonEmpty as NEL
-import Data.Maybe (Maybe(..))
 import Data.Traversable (traverse)
 import Halogen as H
 import Halogen.HTML as HH
@@ -20,41 +19,51 @@ import Halogen.HTML.Properties as HP
 import Model.Photo (Photo(..))
 
 
-type State = Array Photo
+data Query a
+  = Scan a
+  | HandleInput TableName a
+  | GetState (State -> a)
 
-data Query a = Scan a
+type State =
+  { tableName :: TableName
+  , items :: Array Photo
+  , message :: String
+  }
 
+type Input = TableName
+
+data Message = Scanned (Array Photo)
 
 type TableName = String
 
 ui :: forall eff.
-      TableName ->
-      H.Component HH.HTML Query Unit Void (Aff (dynamo :: DYNAMO | eff))
-ui tableName =
+      H.Component HH.HTML Query Input Message (Aff (dynamo :: DYNAMO | eff))
+ui =
   H.component
-    { initialState: const initialState
+    { initialState: initialState
     , render
     , eval
-    , receiver: const Nothing
+    , receiver: HE.input HandleInput
     }
   where
 
-  initialState :: State
-  initialState = []
+  initialState :: Input -> State
+  initialState =
+    { tableName: _
+    , items: []
+    , message: "Initializing..."
+    }
 
   render :: State -> H.ComponentHTML Query
   render state =
     HH.div_
-      [ HH.h1_
-          [ HH.text "Photo List" ]
-      , HH.div_
-          [ HH.text (show (Array.length state)) ]
-      , HH.div_ (renderItem <$> state)
-      , HH.button
-          [ HE.onClick (HE.input_ Scan) ]
-          [ HH.text "Reload" ]
+      [ HH.div_ (renderItem <$> state.items)
       ]
+
     where
+      renderList { items } =
+        HH.div_ (renderItem <$> items)
+
       renderItem (Photo { id, image_url, created_at }) =
         HH.div_
         [ HH.div_
@@ -66,16 +75,30 @@ ui tableName =
       renderDateTime dt =
         HH.text $ either id id $ formatDateTime "YYYY/MM/DD hh:mm:ss" dt
 
-  eval :: Query ~> H.ComponentDSL State Query Void (Aff (dynamo :: DYNAMO | eff))
+  eval :: Query ~> H.ComponentDSL State Query Message (Aff (dynamo :: DYNAMO | eff))
   eval (Scan next) = do
+    tableName <- H.gets _.tableName
+    let opts = { "TableName": tableName }
     res <- H.liftAff $ scan opts
     photos <- H.liftAff $ getItems res."Items"
-    H.put photos
+    H.modify (_ { items = photos })
+    H.raise $ Scanned photos
     pure next
-    where
-      opts = { "TableName": tableName }
 
+    where
       getItems objs =
         case runExcept (traverse decode objs) of
           Right xs -> pure xs
           Left err -> throwError $ error $ show $ NEL.head err
+
+  eval (HandleInput tableName next) = do
+    old <- H.gets _.tableName
+    when (old /= tableName) do
+      H.modify _{ tableName = tableName }
+      H.modify _{ message = "Input received." }
+      -- H.action Scan
+    pure next
+
+  eval (GetState reply) = do
+    state <- H.get
+    pure $ reply state
