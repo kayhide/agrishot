@@ -21,6 +21,7 @@ type AppConfig =
 
 data Query a
   = HandlePhotoList PhotoListUI.Message a
+  | InputPhotoList PhotoListUI.Input a
   | RequestScanPhotoList a
   | CheckPhotoListState a
 
@@ -64,6 +65,12 @@ ui =
       , HE.onClick (HE.input_ RequestScanPhotoList)
       ]
       [ HH.text "Update" ]
+    , HH.button
+      [ HE.onClick $ HE.input_ $ InputPhotoList "hoge" ]
+      [ HH.text "Input hoge" ]
+    , HH.button
+      [ HE.onClick $ HE.input_ $ InputPhotoList "agrishot-dev-photos" ]
+      [ HH.text "Input agrishot-dev-photos" ]
     , HH.slot PhotoListSlot PhotoListUI.ui "agrishot-dev-photos" (HE.input HandlePhotoList)
     ]
 
@@ -74,6 +81,10 @@ ui =
   eval = case _ of
     HandlePhotoList (PhotoListUI.Scanned photos) next -> do
       H.modify (_ { photosCount = Just (Array.length photos) })
+      pure next
+
+    InputPhotoList s next -> do
+      void $ H.query PhotoListSlot $ H.action $ PhotoListUI.HandleInput s
       pure next
 
     RequestScanPhotoList next -> do
