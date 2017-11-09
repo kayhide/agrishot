@@ -57,7 +57,9 @@ initialState =
 render :: State -> H.ComponentHTML Query
 render state =
   HH.div_
-  [ HH.div_ (renderItem <$> state.items)
+  [ HH.div
+    [ HP.class_ $ H.ClassName "row" ]
+    (renderItem <$> state.items)
   , HH.div_ (renderAlert <$> state.alerts)
   ]
 
@@ -67,11 +69,21 @@ render state =
       [ HH.text s ]
 
     renderItem (Photo { id, image_url, created_at }) =
-      HH.div_
-      [ HH.div_
-        [ HH.img [ HP.src image_url ] ]
-      , HH.div_ [ HH.text id ]
-      , HH.div_ [ renderDateTime created_at ]
+      HH.div
+      [ HP.classes [ H.ClassName "col-md-2", H.ClassName "col-sm-6", H.ClassName "col-xs-12" ] ]
+      [ HH.div
+        [ HP.classes [ H.ClassName "card", H.ClassName "mb-2" ] ]
+        [ HH.img [ HP.src image_url, HP.class_ $ H.ClassName "card-img-top" ]
+        , HH.div
+          [ HP.classes [ H.ClassName "card-body" ] ]
+          [ HH.p
+            [ HP.classes [ H.ClassName "card-text" ] ]
+            [ HH.text id ]
+          , HH.p
+            [ HP.classes [ H.ClassName "card-text", H.ClassName "text-muted", H.ClassName "small" ] ]
+            [ renderDateTime created_at ]
+          ]
+        ]
       ]
 
     renderDateTime dt =

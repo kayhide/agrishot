@@ -54,16 +54,28 @@ render :: forall eff. State -> H.ParentHTML Query PhotoListUI.Query Slot (Eff_ e
 render state =
   HH.div_
   [
-    HH.h1_
-    [ HH.text "Photo List" ]
-  , HH.div_
-    [ HH.text photosCount_ ]
-  , HH.button
-    [ HP.title "Update"
-    , HE.onClick (HE.input_ RequestScanPhotoList)
+    HH.nav
+    [ HP.classes [ H.ClassName "navbar", H.ClassName "navbar-dark", H.ClassName "bg-dark" ] ]
+    [
+      HH.span
+      [ HP.classes [ H.ClassName "navbar-brand",H.ClassName "mb-0" ] ]
+      [ HH.text "Agrishot Admin" ]
     ]
-    [ HH.text "Update" ]
-  , HH.slot PhotoListSlot PhotoListUI.ui tableName (HE.input HandlePhotoList)
+  , HH.main
+    [ HP.class_ $ H.ClassName "container" ]
+    [
+      HH.h1_
+      [ HH.text "Photo List" ]
+    , HH.p_
+      [ HH.text photosCount_ ]
+    , HH.button
+      [ HP.title "Update"
+      , HE.onClick (HE.input_ RequestScanPhotoList)
+      , HP.classes [ H.ClassName "btn", H.ClassName "btn-outline-primary", H.ClassName "mb-2" ]
+      ]
+      [ HH.text "Update" ]
+    , HH.slot PhotoListSlot PhotoListUI.ui tableName (HE.input HandlePhotoList)
+    ]
   ]
 
   where
