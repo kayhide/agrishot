@@ -6,6 +6,7 @@ import Aws.Cognito (COGNITO)
 import Aws.Cognito as Cognito
 import Aws.Dynamo (DYNAMO)
 import Aws.Dynamo as Dynamo
+import Component.MainUI (AppConfig)
 import Component.MainUI as MainUI
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (CONSOLE)
@@ -22,20 +23,15 @@ import Halogen as H
 import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
 
-type AppConfig =
-  { stage :: String
-  , facebookAppId :: String
-  , awsRegion :: String
-  , awsIdentityPoolId :: String
-  }
 
 type AppEffs = HA.HalogenEffects (meta :: META, cognito :: COGNITO, dynamo :: DYNAMO, console :: CONSOLE)
 
 main :: Eff AppEffs Unit
 main = HA.runHalogenAff do
   body <- HA.awaitBody
-  initApp =<< liftEff readConfig
-  io <- runUI MainUI.ui unit body
+  appConfig <- liftEff readConfig
+  initApp appConfig
+  io <- runUI MainUI.ui appConfig body
   io.query $ H.action MainUI.RequestScanPhotoList
 
 readConfig :: forall eff. Eff (meta :: META, exception :: EXCEPTION | eff) AppConfig
