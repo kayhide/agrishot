@@ -26,6 +26,7 @@ type AppConfig =
 
 data Query a
   = HandlePhotoList PhotoListUI.Message a
+  | HandleNotice NoticeUI.Message a
   | InputPhotoList PhotoListUI.Input a
   | RequestScanPhotoList a
   | CheckPhotoListState a
@@ -110,12 +111,17 @@ render state =
 
     renderNotices = do
       x@{ id, notice } <- state.notices
-      pure $ HH.slot' cpNotice (NoticeSlot id) NoticeUI.ui x absurd
+      pure $ HH.slot' cpNotice (NoticeSlot id) NoticeUI.ui x $ HE.input HandleNotice
 
 eval :: forall eff. Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message (Eff_ eff)
 eval = case _ of
   HandlePhotoList (PhotoListUI.Scanned photos) next -> do
-    H.modify (_ { photosCount = Just (Array.length photos) })
+    H.modify _{ photosCount = Just (Array.length photos) }
+    pure next
+
+  HandleNotice (NoticeUI.Closed i) next -> do
+    notices <- Array.filter ((i /= _) <<< _.id) <$> H.gets _.notices
+    H.modify _{ notices = notices }
     pure next
 
   InputPhotoList s next -> do
@@ -128,5 +134,5 @@ eval = case _ of
 
   CheckPhotoListState next -> do
     photos <- H.query' cpPhotoList unit $ H.request PhotoListUI.GetState
-    H.modify (_ { photosCount = (Array.length <<< _.items) <$> photos })
+    H.modify _{ photosCount = (Array.length <<< _.items) <$> photos }
     pure next

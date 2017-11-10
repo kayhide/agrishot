@@ -17,12 +17,14 @@ type State =
   , notice :: Notice
   }
 
-data Query a =
-  Initialize a
+data Query a
+  = Initialize a
+  | Close a
 
 type Input = State
 
-type Message = Void
+data Message =
+  Closed Int
 
 ui :: forall eff. H.Component HH.HTML Query Input Message (Aff eff)
 ui =
@@ -39,11 +41,22 @@ render :: State -> H.ComponentHTML Query
 render state =
   HH.div
   [ classes state.notice ]
-  [ HH.text $ text state.notice ]
+  [
+    HH.text $ text state.notice
+  , HH.a
+    [ HE.onClick $ HE.input_ Close
+    , HP.href "#"
+    , HP.class_ $ H.ClassName "pull-right alert-link"
+    ]
+    [ HH.i
+      [ HP.class_ $ H.ClassName "fa fa-times" ]
+      []
+    ]
+  ]
 
   where
-    classes (Info s) = HP.classes [ H.ClassName "alert", H.ClassName "alert-info" ]
-    classes (Alert s) = HP.classes [ H.ClassName "alert", H.ClassName "alert-danger" ]
+    classes (Info s) = HP.class_ $ H.ClassName "alert alert-info"
+    classes (Alert s) = HP.class_ $ H.ClassName "alert alert-danger"
 
     text (Info s) = s
     text (Alert s) = s
@@ -51,4 +64,9 @@ render state =
 eval :: forall eff. Query ~> H.ComponentDSL State Query Message (Aff eff)
 eval = case _ of
   Initialize next -> do
+    pure next
+
+  Close next -> do
+    i <- H.gets _.id
+    H.raise $ Closed i
     pure next
