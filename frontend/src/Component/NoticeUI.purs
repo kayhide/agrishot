@@ -2,7 +2,8 @@ module Component.NoticeUI where
 
 import Prelude
 
-import Control.Monad.Aff (Aff)
+import Control.Monad.Aff (Aff, Milliseconds(..), delay)
+import Data.Array as Array
 import Data.Maybe (Maybe(..))
 import Halogen as H
 import Halogen.HTML as HH
@@ -12,16 +13,22 @@ import Halogen.HTML.Properties as HP
 
 data Notice = Info String | Alert String
 
+type IdNotice =
+  { id :: Int
+  , notice :: Notice
+  }
+
 type State =
   { id :: Int
   , notice :: Notice
+  , animated :: Maybe String
   }
 
 data Query a
   = Initialize a
   | Close a
 
-type Input = State
+type Input = IdNotice
 
 data Message =
   Closed Int
@@ -29,13 +36,16 @@ data Message =
 ui :: forall eff. H.Component HH.HTML Query Input Message (Aff eff)
 ui =
   H.lifecycleComponent
-    { initialState: id
+    { initialState: initialState
     , render
     , eval
     , receiver: const Nothing
     , initializer: Just $ H.action Initialize
     , finalizer: Nothing
     }
+
+initialState :: IdNotice -> State
+initialState { id, notice } = { id, notice, animated: Just "animated fadeInDown" }
 
 render :: State -> H.ComponentHTML Query
 render state =
@@ -55,8 +65,8 @@ render state =
   ]
 
   where
-    classes (Info s) = HP.class_ $ H.ClassName "alert alert-info"
-    classes (Alert s) = HP.class_ $ H.ClassName "alert alert-danger"
+    classes (Info s) = HP.classes $ H.ClassName <$> [ "alert alert-info" ] <> Array.catMaybes [ state.animated ]
+    classes (Alert s) = HP.classes $ H.ClassName <$> ["alert alert-danger"] <> Array.catMaybes [ state.animated ]
 
     text (Info s) = s
     text (Alert s) = s
@@ -68,5 +78,7 @@ eval = case _ of
 
   Close next -> do
     i <- H.gets _.id
+    H.modify _{ animated = Just "animated fadeOutUp" }
+    H.liftAff $ delay (Milliseconds 1000.0)
     H.raise $ Closed i
     pure next
