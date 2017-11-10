@@ -4,6 +4,7 @@
     "aws-sdk": "^2.132.0"
   },
   "devDependencies": {
+    "browser-sync": "^2.18.13",
     "concurrently": "^3.5.0",
     "extract-text-webpack-plugin": "^3.0.2",
     "html-loader": "^0.5.1",
@@ -17,8 +18,9 @@
   "scripts": {
     "build": "pulp build && webpack",
     "watch": "webpack --watch",
-    "browse": "live-server dist/dev --host=localhost --port=3000 --wait=1000 --watch *.js,*.css,*.html --ignore .*",
-    "dev": "concurrently \"yarn run watch\" \"yarn run browse\"",
+    "live-server": "live-server dist/dev --host=localhost --port=3000 --wait 1000 --watch dist/dev/*",
+    "browser-sync": "browser-sync start --server --ss dist/dev --files dist/dev --no-ui",
+    "dev": "concurrently \"yarn run watch\" \"yarn run browser-sync\"",
     "deploy": "rake s3:deploy"
   }
 }
