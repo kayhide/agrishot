@@ -66,10 +66,8 @@ ui =
   H.parentComponent
     { initialState: { appConfig: _
                     , photosCount: Nothing
-                    , notices: [ { id: 0, notice: NoticeUI.Info "Hi!" }
-                               , { id: 1, notice: NoticeUI.Alert "Watch!" }
-                               ]
-                    , noticeLastId: 1
+                    , notices: []
+                    , noticeLastId: 0
                     }
     , render
     , eval
@@ -81,24 +79,30 @@ render state =
   HH.div_
   [
     HH.nav
-    [ HP.classes [ H.ClassName "navbar", H.ClassName "navbar-dark", H.ClassName "bg-dark" ] ]
+    [ HP.class_ $ H.ClassName "navbar navbar-dark bg-dark" ]
     [
       HH.span
-      [ HP.classes [ H.ClassName "navbar-brand",H.ClassName "mb-0" ] ]
+      [ HP.class_ $ H.ClassName "navbar-brand mb-0" ]
       [ HH.text "Agrishot Admin" ]
     ]
-  , HH.main
-    [ HP.classes [ H.ClassName "container",H.ClassName "mt-2" ] ]
+  , HH.div
+    [ HP.classes [ H.ClassName "fixed-bottom" ] ]
     [
-      HH.div_ renderNotices
-    , HH.h1_
+      HH.div
+      [ HP.class_ $ H.ClassName "container" ]
+      renderNotices
+    ]
+  , HH.main
+    [ HP.class_ $ H.ClassName "container mt-2" ]
+    [
+      HH.h1_
       [ HH.text "Photo List" ]
     , HH.p_
       [ HH.text photosCount_ ]
     , HH.button
       [ HP.title "Update"
       , HE.onClick (HE.input_ RequestScanPhotoList)
-      , HP.classes [ H.ClassName "btn", H.ClassName "btn-outline-primary", H.ClassName "mb-2" ]
+      , HP.class_ $ H.ClassName "btn btn-outline-primary mb-2"
       ]
       [ HH.text "Update" ]
     , HH.slot' cpPhotoList unit PhotoListUI.ui tableName $ HE.input HandlePhotoList
@@ -130,6 +134,9 @@ eval = case _ of
 
   RequestScanPhotoList next -> do
     void $ H.query' cpPhotoList unit $ H.action PhotoListUI.Scan
+    noticeLastId <- (_ + 1) <$> H.gets _.noticeLastId
+    notices <- (_ <> [{ id: noticeLastId, notice: NoticeUI.Info "Updated!" }]) <$> H.gets _.notices
+    H.modify _{ notices = notices, noticeLastId = noticeLastId }
     pure next
 
   CheckPhotoListState next -> do
