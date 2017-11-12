@@ -1,3 +1,3 @@
 module Aws.Config where
 
-type AwsConfig c = { region :: String | c }
+type AwsConfig = forall c. { region :: String | c }

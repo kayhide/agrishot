@@ -2,13 +2,17 @@ module Component.MainUI where
 
 import Prelude
 
+import Aws.Cognito (COGNITO)
 import Aws.Dynamo (DYNAMO)
+import Aws.Dynamo as Dynamo
+import Component.LoginUI as LoginUI
 import Component.NoticeUI as NoticeUI
 import Component.PhotoListUI as PhotoListUI
 import Control.Monad.Aff (Aff)
+import Control.Monad.State (class MonadState)
 import Data.Array as Array
-import Data.Either.Nested (Either2)
-import Data.Functor.Coproduct.Nested (Coproduct2)
+import Data.Either.Nested (Either3)
+import Data.Functor.Coproduct.Nested (Coproduct3)
 import Data.Maybe (Maybe(..), maybe)
 import Halogen as H
 import Halogen.Component.ChildPath as CP
@@ -25,16 +29,17 @@ type AppConfig =
   }
 
 data Query a
-  = HandlePhotoList PhotoListUI.Message a
-  | HandleNotice NoticeUI.Message a
-  | InputPhotoList PhotoListUI.Input a
+  = HandleNotice NoticeUI.Message a
+  | HandleLogin LoginUI.Message a
+  | HandlePhotoList PhotoListUI.Message a
   | RequestScanPhotoList a
   | CheckPhotoListState a
 
 type State =
   { appConfig :: AppConfig
   , photosCount :: Maybe Int
-  , notices :: Array { id :: Int, notice :: NoticeUI.Notice }
+  , awsAuthenticated :: Boolean
+  , notices :: Array NoticeUI.IdNotice
   , noticeLastId :: Int
   }
 
@@ -46,26 +51,34 @@ data NoticeSlot = NoticeSlot Int
 derive instance eqNoticeSlot :: Eq NoticeSlot
 derive instance ordNoticeSlot :: Ord NoticeSlot
 
+data LoginSlot = LoginSlot
+derive instance eqLoginSlot :: Eq LoginSlot
+derive instance ordLoginSlot :: Ord LoginSlot
+
 data PhotoListSlot = PhotoListSlot
 derive instance eqPhotoListSlot :: Eq PhotoListSlot
 derive instance ordPhotoListSlot :: Ord PhotoListSlot
 
-type ChildQuery = Coproduct2 NoticeUI.Query PhotoListUI.Query
-type ChildSlot = Either2 NoticeSlot Unit
+type ChildQuery = Coproduct3 NoticeUI.Query LoginUI.Query PhotoListUI.Query
+type ChildSlot = Either3 NoticeSlot LoginSlot Unit
 
 cpNotice :: CP.ChildPath NoticeUI.Query ChildQuery NoticeSlot ChildSlot
 cpNotice = CP.cp1
 
-cpPhotoList :: CP.ChildPath PhotoListUI.Query ChildQuery Unit ChildSlot
-cpPhotoList = CP.cp2
+cpLogin :: CP.ChildPath LoginUI.Query ChildQuery LoginSlot ChildSlot
+cpLogin = CP.cp2
 
-type Eff_ eff = Aff (dynamo :: DYNAMO | eff)
+cpPhotoList :: CP.ChildPath PhotoListUI.Query ChildQuery Unit ChildSlot
+cpPhotoList = CP.cp3
+
+type Eff_ eff = Aff (cognito :: COGNITO, dynamo :: DYNAMO | eff)
 
 ui :: forall eff. H.Component HH.HTML Query Input Message (Eff_ eff)
 ui =
   H.parentComponent
     { initialState: { appConfig: _
                     , photosCount: Nothing
+                    , awsAuthenticated: false
                     , notices: []
                     , noticeLastId: 0
                     }
@@ -84,6 +97,7 @@ render state =
       HH.span
       [ HP.class_ $ H.ClassName "navbar-brand mb-0" ]
       [ HH.text "Agrishot Admin" ]
+    , HH.slot' cpLogin LoginSlot LoginUI.ui loginConfig $ HE.input HandleLogin
     ]
   , HH.div
     [ HP.classes [ H.ClassName "fixed-bottom" ] ]
@@ -100,18 +114,39 @@ render state =
     , HH.p_
       [ HH.text photosCount_ ]
     , HH.button
-      [ HP.title "Update"
+      [ HP.class_ $ H.ClassName updateButtonClass
+      , HP.title "Update"
       , HE.onClick (HE.input_ RequestScanPhotoList)
-      , HP.class_ $ H.ClassName "btn btn-outline-primary mb-2"
       ]
       [ HH.text "Update" ]
-    , HH.slot' cpPhotoList unit PhotoListUI.ui tableName $ HE.input HandlePhotoList
+    , renderPhotoList $ state.awsAuthenticated
     ]
   ]
 
   where
     photosCount_ = maybe "(unknown)" show state.photosCount
     tableName = "agrishot-" <> state.appConfig.stage <> "-photos"
+    loginConfig =
+      { awsRegion: state.appConfig.awsRegion
+      , awsIdentityPoolId: state.appConfig.awsIdentityPoolId
+      , facebookAppId: state.appConfig.facebookAppId
+      }
+
+    updateButtonClass =
+      "btn btn-outline-primary mb-2" <>
+      if state.awsAuthenticated
+      then ""
+      else " disabled"
+
+    renderPhotoList false =
+      HH.p
+      [ HP.class_ $ H.ClassName "text-center" ]
+      [
+        HH.i [ HP.class_ $ H.ClassName "fa fa-spinner fa-pulse fa-3x" ] []
+      ]
+
+    renderPhotoList true =
+      HH.slot' cpPhotoList unit PhotoListUI.ui tableName $ HE.input HandlePhotoList
 
     renderNotices = do
       x@{ id, notice } <- state.notices
@@ -119,27 +154,48 @@ render state =
 
 eval :: forall eff. Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message (Eff_ eff)
 eval = case _ of
-  HandlePhotoList (PhotoListUI.Scanned photos) next -> do
-    H.modify _{ photosCount = Just (Array.length photos) }
-    pure next
-
   HandleNotice (NoticeUI.Closed i) next -> do
     notices <- Array.filter ((i /= _) <<< _.id) <$> H.gets _.notices
     H.modify _{ notices = notices }
     pure next
 
-  InputPhotoList s next -> do
-    void $ H.query' cpPhotoList unit $ H.action $ PhotoListUI.HandleInput s
+  HandleLogin (LoginUI.Authenticated awsConfig) next -> do
+    postInfo "Authenticated!"
+    H.liftEff $ Dynamo.setup awsConfig
+    H.modify _{ awsAuthenticated = true }
+    eval $ RequestScanPhotoList next
+
+  HandleLogin (LoginUI.Failed s) next -> do
+    postAlert s
+    pure next
+
+  HandlePhotoList (PhotoListUI.Scanned photos) next -> do
+    H.modify _{ photosCount = Just (Array.length photos) }
+    postInfo "Updated."
+    pure next
+
+  HandlePhotoList (PhotoListUI.Failed s) next -> do
+    postAlert s
     pure next
 
   RequestScanPhotoList next -> do
     void $ H.query' cpPhotoList unit $ H.action PhotoListUI.Scan
-    noticeLastId <- (_ + 1) <$> H.gets _.noticeLastId
-    notices <- (_ <> [{ id: noticeLastId, notice: NoticeUI.Info "Updated!" }]) <$> H.gets _.notices
-    H.modify _{ notices = notices, noticeLastId = noticeLastId }
     pure next
 
   CheckPhotoListState next -> do
     photos <- H.query' cpPhotoList unit $ H.request PhotoListUI.GetState
     H.modify _{ photosCount = (Array.length <<< _.items) <$> photos }
     pure next
+
+
+postNotice :: forall m. MonadState State m => NoticeUI.Notice -> m Unit
+postNotice notice = do
+  noticeLastId <- (_ + 1) <$> H.gets _.noticeLastId
+  notices <- (_ <> [{ id: noticeLastId, notice: notice }]) <$> H.gets _.notices
+  H.modify _{ notices = notices, noticeLastId = noticeLastId }
+
+postInfo :: forall m. MonadState State m => String -> m Unit
+postInfo s = postNotice $ NoticeUI.Info s
+
+postAlert :: forall m. MonadState State m => String -> m Unit
+postAlert s = postNotice $ NoticeUI.Alert s

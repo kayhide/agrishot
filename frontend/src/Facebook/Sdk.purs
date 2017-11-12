@@ -75,6 +75,7 @@ defaultConfig appId = Config
 derive instance eqConfig :: Eq Config
 derive instance genericConfig :: Generic Config
 instance showConfig :: Show Config where show = gShow
+derive instance newtypeConfig :: Newtype Config _
 
 data Status = Connected | NotAuthorized | Unknown
 

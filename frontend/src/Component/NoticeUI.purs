@@ -13,6 +13,10 @@ import Halogen.HTML.Properties as HP
 
 data Notice = Info String | Alert String
 
+noticeBody :: Notice -> String
+noticeBody (Info s) = s
+noticeBody (Alert s) = s
+
 type IdNotice =
   { id :: Int
   , notice :: Notice
@@ -58,7 +62,7 @@ render state =
       HH.div
       [ HP.class_ $ H.ClassName "position-relative" ]
       [
-        HH.text $ text state.entity.notice
+        HH.text $ noticeBody state.entity.notice
       , HH.a
         [ HE.onClick $ HE.input_ Pin
         , HP.href "#"
@@ -74,9 +78,6 @@ render state =
   where
     classes (Info s) = HP.class_ $ H.ClassName "alert alert-info"
     classes (Alert s) = HP.class_ $ H.ClassName "alert alert-danger"
-
-    text (Info s) = s
-    text (Alert s) = s
 
     renderPinIcon false =
       HH.i [ HP.class_ $ H.ClassName "notice-pin fa fa-map-pin fa-rotate-90" ] []

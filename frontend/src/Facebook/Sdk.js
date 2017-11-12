@@ -41,9 +41,14 @@ exports._logout = function(fb) {
 exports._init = function(fbConfig) {
   return function(onError, onSuccess) {
     window.fbAsyncInit = function() {
-      FB.init(fbConfig);
-      FB.AppEvents.logPageView();
-      onSuccess(FB);
+      try {
+        FB.init(fbConfig);
+        FB.AppEvents.logPageView();
+        onSuccess(FB);
+      }
+      catch (err) {
+        onError(err.message);
+      }
     };
     (function(d, s, id) {
       var js, fjs = d.getElementsByTagName(s)[0];

@@ -8,19 +8,19 @@ import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (runExcept, throwError)
 import Data.Either (Either(..), either)
 import Data.Foldable (intercalate)
+import Data.Foreign (Foreign)
 import Data.Foreign.Class (decode)
 import Data.Formatter.DateTime (formatDateTime)
+import Data.Maybe (Maybe(..))
 import Data.Traversable (traverse)
 import Halogen as H
 import Halogen.HTML as HH
-import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Model.Photo (Photo(..))
 
 
 data Query a
   = Scan a
-  | HandleInput TableName a
   | GetState (State -> a)
 
 type State =
@@ -32,7 +32,9 @@ type State =
 
 type Input = TableName
 
-data Message = Scanned (Array Photo)
+data Message
+  = Scanned (Array Photo)
+  | Failed String
 
 type TableName = String
 
@@ -43,7 +45,7 @@ ui =
     { initialState: initialState
     , render
     , eval
-    , receiver: HE.input HandleInput
+    , receiver: const Nothing
     }
 
 initialState :: Input -> State
@@ -90,38 +92,32 @@ render state =
       HH.text $ either id id $ formatDateTime "YYYY/MM/DD hh:mm:ss" dt
 
 eval :: forall eff. Query ~> H.ComponentDSL State Query Message (Aff (dynamo :: DYNAMO | eff))
-eval (Scan next) = do
-  opts <- { "TableName": _ } <$> H.gets _.tableName
-  items <- H.liftAff $ attempt $ do
-    getItems <<< _."Items" =<< scan opts
+eval = case _ of
+  Scan next -> do
+    opts <- { "TableName": _ } <$> H.gets _.tableName
+    items <- H.liftAff $ attempt $ do
+      items <- _."Items" <$> scan opts
+      getItems items
 
-  case items of
-    Left err ->
-      H.modify _{ items = [], alerts = [show err] }
+    case items of
+      Left err -> do
+        H.modify _{ items = [], alerts = [show err] }
+        H.raise $ Failed "DynamoDB scan failed"
 
-    Right items_ -> do
-      H.modify _{ items = items_, alerts = [] }
-      H.raise $ Scanned items_
+      Right items_ -> do
+        H.modify _{ items = items_, alerts = [] }
+        H.raise $ Scanned items_
 
-  pure next
-
-  where
-    getItems objs =
-      case runExcept (traverse decode objs) of
-        Right xs -> pure xs
-        Left err -> do
-          throwError $ (error <<< intercalate "\n\n" <<< map show) err
-
-eval (HandleInput tableName next) = do
-  old <- H.gets _.tableName
-  if (old /= tableName)
-    then do
-    H.modify _{ tableName = tableName }
-    H.modify _{ message = "Input received." }
-    eval (Scan next)
-    else
     pure next
 
-eval (GetState reply) = do
-  state <- H.get
-  pure $ reply state
+  GetState reply -> do
+    state <- H.get
+    pure $ reply state
+
+
+getItems :: forall eff. Array Foreign -> Aff eff (Array Photo)
+getItems objs =
+  case runExcept (traverse decode objs) of
+    Right xs -> pure xs
+    Left err -> do
+      throwError $ (error <<< intercalate "\n\n" <<< map show) err

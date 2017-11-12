@@ -14,7 +14,8 @@
     "purescript-random": "^3.0.0",
     "purescript-foreign-generic": "^5.0.0",
     "purescript-datetime": "^3.4.0",
-    "purescript-formatters": "^3.0.0"
+    "purescript-formatters": "^3.0.0",
+    "purescript-newtype": "^2.0.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^3.0.0"

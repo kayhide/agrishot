@@ -14,7 +14,7 @@ foreign import setRegion :: forall eff. String -> Eff (cognito :: COGNITO | eff)
 foreign import setIdentityPoolId :: forall eff. String -> Eff (cognito :: COGNITO | eff) Unit
 foreign import setFacebookToken :: forall eff. String -> Eff (cognito :: COGNITO | eff) Unit
 
-foreign import _authenticate :: forall c eff. EffFnAff (cognito :: COGNITO | eff) (AwsConfig c)
+foreign import _authenticate :: forall eff. EffFnAff (cognito :: COGNITO | eff) AwsConfig
 
-authenticate :: forall c eff. Aff (cognito :: COGNITO | eff) (AwsConfig c)
+authenticate :: forall eff. Aff (cognito :: COGNITO | eff) AwsConfig
 authenticate = fromEffFnAff _authenticate

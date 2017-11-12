@@ -19,7 +19,7 @@
     "build": "pulp build && webpack",
     "watch": "webpack --watch",
     "live-server": "live-server dist/dev --host=localhost --port=3000 --wait 1000 --watch dist/dev/*",
-    "browser-sync": "browser-sync start --server --ss dist/dev --files dist/dev --no-ui",
+    "browser-sync": "browser-sync start --server --ss dist/dev --files dist/dev --no-ui --no-notify",
     "dev": "concurrently \"yarn run watch\" \"yarn run browser-sync\"",
     "deploy": "rake s3:deploy"
   }
