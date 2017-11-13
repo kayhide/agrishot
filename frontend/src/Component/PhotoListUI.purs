@@ -26,8 +26,8 @@ data Query a
 type State =
   { tableName :: TableName
   , items :: Array Photo
-  , message :: String
   , alerts :: Array String
+  , busy :: Boolean
   }
 
 type Input = TableName
@@ -38,8 +38,9 @@ data Message
 
 type TableName = String
 
-ui :: forall eff.
-      H.Component HH.HTML Query Input Message (Aff (dynamo :: DYNAMO | eff))
+type Eff_ eff = Aff (dynamo :: DYNAMO | eff)
+
+ui :: forall eff. H.Component HH.HTML Query Input Message (Eff_ eff)
 ui =
   H.component
     { initialState: initialState
@@ -52,8 +53,8 @@ initialState :: Input -> State
 initialState =
     { tableName: _
     , items: []
-    , message: "Initializing..."
     , alerts: []
+    , busy: false
     }
 
 render :: State -> H.ComponentHTML Query
@@ -63,12 +64,21 @@ render state =
     [ HP.class_ $ H.ClassName "row" ]
     (renderItem <$> state.items)
   , HH.div_ (renderAlert <$> state.alerts)
+  , renderBusy state.busy
   ]
 
   where
     renderAlert s =
       HH.pre_
       [ HH.text s ]
+
+    renderBusy false = HH.p_ []
+    renderBusy true =
+      HH.p
+      [ HP.class_ $ H.ClassName "text-center" ]
+      [
+        HH.i [ HP.class_ $ H.ClassName "fa fa-spinner fa-pulse fa-3x" ] []
+      ]
 
     renderItem (Photo { id, image_url, created_at }) =
       HH.div
@@ -91,23 +101,27 @@ render state =
     renderDateTime dt =
       HH.text $ either id id $ formatDateTime "YYYY/MM/DD hh:mm:ss" dt
 
-eval :: forall eff. Query ~> H.ComponentDSL State Query Message (Aff (dynamo :: DYNAMO | eff))
+eval :: forall eff. Query ~> H.ComponentDSL State Query Message (Eff_ eff)
 eval = case _ of
   Scan next -> do
-    opts <- { "TableName": _ } <$> H.gets _.tableName
-    items <- H.liftAff $ attempt $ do
-      items <- _."Items" <$> scan opts
-      getItems items
+    busy <- H.gets _.busy
+    when (not busy) do
+      H.modify _{ busy = true }
+      opts <- { "TableName": _ } <$> H.gets _.tableName
+      items <- H.liftAff $ attempt $ do
+        items <- _."Items" <$> scan opts
+        getItems items
 
-    case items of
-      Left err -> do
-        H.modify _{ items = [], alerts = [show err] }
-        H.raise $ Failed "DynamoDB scan failed"
+      case items of
+        Left err -> do
+          H.modify _{ items = [], alerts = [show err] }
+          H.raise $ Failed "DynamoDB scan failed"
 
-      Right items_ -> do
-        H.modify _{ items = items_, alerts = [] }
-        H.raise $ Scanned items_
+        Right items_ -> do
+          H.modify _{ items = items_, alerts = [] }
+          H.raise $ Scanned items_
 
+    H.modify _{ busy = false }
     pure next
 
   GetState reply -> do

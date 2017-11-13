@@ -8,6 +8,7 @@ import Aws.Config (AwsConfig)
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Maybe.Trans (lift)
+import Control.Monad.State (class MonadState)
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.Newtype (unwrap)
@@ -35,6 +36,7 @@ type State =
 
 data Query a
   = Initialize a
+  | CheckFacebook a
   | LoginFacebook a
   | Authenticate a
 
@@ -99,12 +101,28 @@ eval (Initialize next) = do
 
     Right sdk_ -> do
       H.modify _{ facebookInitialized = true, facebookSdk = Just sdk_ }
-      eval $ LoginFacebook next
+      eval $ CheckFacebook next
+
+eval (CheckFacebook next) = do
+  res <- runExceptT do
+    sdk <- verifyFacebookSdk
+    FB.StatusInfo info <- lift $ H.liftAff $ FB.loginStatus sdk
+    FB.AuthResponse auth <- onNothing "Facebook login not ready" info.authResponse
+    let FB.AccessToken token = auth.accessToken
+        FB.UserId userId = auth.userId
+    lift $ H.modify _{ facebookAccessToken = Just token, facebookUserId = userId }
+
+  case res of
+    Left err -> do
+      H.raise $ Failed err
+      pure next
+    Right _ -> do
+      eval $ Authenticate next
 
 eval (LoginFacebook next) = do
   res <- runExceptT do
-    sdk <- onNothing "Facebook not initialized" =<< (lift $ H.gets _.facebookSdk)
-    FB.StatusInfo info <- lift $ H.liftAff $ FB.loginStatus sdk
+    sdk <- verifyFacebookSdk
+    FB.StatusInfo info <- lift $ H.liftAff $ FB.login sdk $ FB.LoginOptions{ scopes: [ FB.Scope "public_profile" ] }
     FB.AuthResponse auth <- onNothing "Facebook login failed" info.authResponse
     let FB.AccessToken token = auth.accessToken
         FB.UserId userId = auth.userId
@@ -120,7 +138,7 @@ eval (LoginFacebook next) = do
 eval (Authenticate next) = do
   config <- H.gets _.config
   res <- runExceptT do
-    token <- onNothing "Facebook login not done" =<< (lift $ H.gets _.facebookAccessToken)
+    token <- verifyFacebookAccessToken
     lift $ H.liftEff do
       Cognito.setRegion config.awsRegion
       Cognito.setIdentityPoolId config.awsIdentityPoolId
@@ -135,3 +153,11 @@ eval (Authenticate next) = do
 
 onNothing :: forall m. Monad m => String -> Maybe ~> ExceptT String m
 onNothing s = maybe (throwError s) pure
+
+verifyFacebookSdk :: forall m. MonadState State m => ExceptT String m FB.Sdk
+verifyFacebookSdk =
+  onNothing "Facebook not initialized" =<< (lift $ H.gets _.facebookSdk)
+
+verifyFacebookAccessToken :: forall m. MonadState State m => ExceptT String m String
+verifyFacebookAccessToken =
+  onNothing "Facebook login not done" =<< (lift $ H.gets _.facebookAccessToken)

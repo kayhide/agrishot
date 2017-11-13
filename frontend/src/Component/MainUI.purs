@@ -138,13 +138,7 @@ render state =
       then ""
       else " disabled"
 
-    renderPhotoList false =
-      HH.p
-      [ HP.class_ $ H.ClassName "text-center" ]
-      [
-        HH.i [ HP.class_ $ H.ClassName "fa fa-spinner fa-pulse fa-3x" ] []
-      ]
-
+    renderPhotoList false = HH.div_ []
     renderPhotoList true =
       HH.slot' cpPhotoList unit PhotoListUI.ui tableName $ HE.input HandlePhotoList
 
@@ -160,7 +154,7 @@ eval = case _ of
     pure next
 
   HandleLogin (LoginUI.Authenticated awsConfig) next -> do
-    postInfo "Authenticated!"
+    postInfo "Authenticated."
     H.liftEff $ Dynamo.setup awsConfig
     H.modify _{ awsAuthenticated = true }
     eval $ RequestScanPhotoList next
@@ -171,7 +165,7 @@ eval = case _ of
 
   HandlePhotoList (PhotoListUI.Scanned photos) next -> do
     H.modify _{ photosCount = Just (Array.length photos) }
-    postInfo "Updated."
+    postInfo "PhotoList Updated."
     pure next
 
   HandlePhotoList (PhotoListUI.Failed s) next -> do
