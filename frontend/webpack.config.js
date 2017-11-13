@@ -24,7 +24,7 @@ const nameWith = (env => {
 module.exports = {
   entry: {
     admin: './src/entry.js',
-    index: './src/index.js',
+    index: './static/static.js',
     privacy_policy: './static/static.js'
   },
 
