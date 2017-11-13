@@ -1,3 +1,8 @@
 module Aws.Config where
 
-type AwsConfig = forall c. { region :: String | c }
+import Control.Monad.Eff (Eff)
+import Data.Foreign (Foreign)
+
+newtype AwsConfig = AwsConfig Foreign
+
+foreign import build :: forall r eff. { region :: String | r } -> Eff eff AwsConfig
