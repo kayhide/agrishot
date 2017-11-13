@@ -4,7 +4,9 @@ const webpack = require('webpack');
 const CleanupPlugin = require('webpack-cleanup-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const HtmlPlugin = require('html-webpack-plugin');
+const HtmlExcludeAssetsPlugin = require('html-webpack-exclude-assets-plugin');
 
+const OmitPlugin = require('./lib/omit-webpack-plugin');
 const helper = require('./lib/helper');
 
 process.env.STAGE = process.env.STAGE || 'dev';
@@ -20,12 +22,21 @@ const nameWith = (env => {
   };
 }) (process.env.STAGE);
 
+const entries = {
+  regular: {
+    admin: './src/entry.js'
+  },
+  static: {
+    index: './static/index.html',
+    privacy_policy: './static/privacy_policy.html'
+  }
+}
+
 
 module.exports = {
   entry: {
-    admin: './src/entry.js',
-    index: './static/static.js',
-    privacy_policy: './static/static.js'
+    ...entries.regular,
+    ...entries.static
   },
 
   output: {
@@ -73,21 +84,26 @@ module.exports = {
       ENV: _.mapValues(helper.readPublicEnv(process.env.STAGE), JSON.stringify)
     }),
     new ExtractTextPlugin(nameWith('styles', '.css')),
-    new HtmlPlugin({
-      filename: 'admin.html',
-      template: 'static/admin.html',
-      chunks: ['admin']
-    }),
-    new HtmlPlugin({
-      filename: 'index.html',
-      template: 'static/index.html',
-      chunks: ['index']
-    }),
-    new HtmlPlugin({
-      filename: 'privacy_policy.html',
-      template: 'static/privacy_policy.html',
-      chunks: ['privacy_policy']
-    }),
-    new CleanupPlugin()
+
+    ...Object.keys(entries.regular).map(k => new HtmlPlugin({
+      filename: `${k}.html`,
+      template: `./static/${k}.html`,
+      favicon: './static/favicon.ico',
+      chunks: [k]
+    })),
+
+    ...Object.keys(entries.static).map(k => new HtmlPlugin({
+      filename: `${k}.html`,
+      template: `./static/${k}.html`,
+      favicon: './static/favicon.ico',
+      chunks: [k],
+      excludeAssets: [/.*\.js/]
+    })),
+
+    new HtmlExcludeAssetsPlugin(),
+    new CleanupPlugin(),
+    new OmitPlugin({
+      chunks: _.keys(entries.static)
+    })
   ]
 };
