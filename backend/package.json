@@ -21,7 +21,8 @@
     "test": "mocha --recursive --require intelli-espower-loader",
     "test-watch": "node_modules/mocha/bin/mocha --recursive --watch --require intelli-espower-loader",
     "localstack": "SERVICES=dynamodb,kinesis,s3,cloudformation localstack start --docker",
-    "init": "node lib/init.js && STAGE=test node lib/init.js",
+    "seed": "node lib/init.js && STAGE=test node lib/init.js",
+    "repl": "node lib/repl.js",
     "deploy": "serverless deploy -v"
   }
 }

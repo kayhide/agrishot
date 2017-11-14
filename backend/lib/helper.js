@@ -7,20 +7,9 @@ const promisify = require('util.promisify');
 const sinon = require('sinon');
 const _ = require('lodash');
 
-const Serverless = require('serverless');
-const AWS = require('aws-sdk');
 const Localstack = require('./localstack');
 
 module.exports = {
-  readConfig() {
-    const sls = new Serverless();
-    return sls.service.load().then(() => {
-      return sls.variables.populateService();
-    }).then(() => {
-      return Promise.resolve(sls.service);
-    });
-  },
-
   createResources(config) {
     const stackName = `${config.service}-${config.provider.stage}`
     const resources = Object.assign({}, config.resources);

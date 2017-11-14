@@ -1,34 +1,22 @@
 'use strict';
 
-const co = require('co');
-const helper = require('../lib/helper');
-
 process.env.STAGE = 'test';
 
-function initEnv(env) {
-  let org = Object.assign({}, process.env);
+const co = require('co');
 
-  before(() => {
-    Object.assign(process.env, env);
-  });
-
-  after(() => {
-    process.env = org;
-  });
-}
-
+const boot = require('../lib/boot');
 
 let config;
 
 before((done) => {
   co(function *() {
-    config = yield helper.readConfig();
-    initEnv(config.provider.environment);
+    config = yield boot();
     done();
   });
 });
 
 beforeEach((done) => {
+  const helper = require('../lib/helper');
   co(function *() {
     const resources = config.resources && config.resources.Resources || [];
     for (let x in resources) {
