@@ -28,7 +28,7 @@ module.exports.receive = (event, context, callback) => {
   co(function *() {
     if (attachments) {
       const src = attachments[0].payload.url;
-      const photo = new Photo();
+      const photo = Photo.build();
       photo.src_url = src;
       photo.sender_id = senderId;
       yield photo.save();
@@ -52,6 +52,7 @@ module.exports.recognize = (event, context, callback) => {
   co(function *() {
     const data = event.Records[0].dynamodb.NewImage;
     const photo = Photo.unmarshall(data);
+    if (!photo.src_url) { throw new Error("`Photo#src_url` is not present") }
     const meta = yield Photo.store(photo, photo.src_url)
     photo.image_url = meta.Location;
     yield photo.save();

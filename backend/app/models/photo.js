@@ -14,6 +14,7 @@ const db = new AWS.DynamoDB.DocumentClient();
 const Converter = require('aws-sdk/lib/dynamodb/converter');
 const s3 = new AWS.S3();
 
+const Base = require('./base');
 
 class Photo {
   constructor(attrs = {}) {
@@ -36,33 +37,28 @@ class Photo {
   }
 
   save() {
-    this.beforeSave();
-    const params = { TableName: `${process.env.RESOURCE_PREFIX}photos`, Item: this.attributes() };
-    return promisify(db.put.bind(db))(params);
+    return Base.save(this);
   }
 }
 
 Photo.tableName = `${process.env.RESOURCE_PREFIX}photos`;
 
+Photo.tableBasename = 'photos';
+
+Photo.build = (attrs = {}) => {
+  return new Photo(attrs);
+}
+
 Photo.find = (id) => {
-  return co(function *() {
-    const data = yield promisify(db.get.bind(db))({
-      TableName: Photo.tableName,
-      Key: { id: id }
-    });
-    return data.Item;
-  });
+  return Base.find(Photo, id);
 }
 
 Photo.unmarshall = (data) => {
-  return new Photo(Converter.unmarshall(data));
+  return Photo.build(Converter.unmarshall(data));
 }
 
 Photo.count = () => {
-  return co(function *() {
-    const data = yield promisify(db.scan.bind(db))({ TableName: Photo.tableName, Select: 'COUNT' });
-    return data.Count;
-  });
+  return Base.count(Photo);
 }
 
 Photo.last = () => {
