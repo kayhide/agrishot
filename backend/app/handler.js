@@ -32,7 +32,10 @@ module.exports.receive = (event, context, callback) => {
       const src = attachments[0].payload.url;
       const photo = Photo.build({
         src_url: src,
-        sender_id: senderId
+        sender: {
+          provider: 'facebook',
+          id: senderId
+        }
       });
       yield Photo.create(photo);
       yield Messenger.send(senderId, t.received_image);
@@ -64,8 +67,8 @@ module.exports.recognize = (event, context, callback) => {
     const predictions = yield Predictor.predict(photo.image_url);
     const items = predictions.slice(0, 2).map((item) => `${item.Tag} ${Math.floor(item.Probability * 100)}%`);
 
-    yield Messenger.send(photo.sender_id, t.predictions(items));
-    yield Messenger.send(photo.sender_id, t.will_be_in_touch_soon);
+    yield Messenger.send(photo.sender.id, t.predictions(items));
+    yield Messenger.send(photo.sender.id, t.will_be_in_touch_soon);
     callback(null, { message: 'Recognize successfully called', event });
   }).catch((err) => {
     console.log(err);

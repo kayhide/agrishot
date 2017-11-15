@@ -136,7 +136,7 @@ describe('#receive', () => {
         assert(cur - org === 1);
 
         const photo = yield Photo.last();
-        assert(photo.sender_id === '6789012345678901');
+        assert(photo.sender_id === 'facebook:6789012345678901');
       });
     });
   });

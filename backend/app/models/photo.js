@@ -22,17 +22,30 @@ const model = dynogels.define('Photo', {
   hashKey: 'id',
 
   schema: {
-    id: Joi.string().uuid(),
-    sender_id: Joi.string(),
+    id: Joi.string().uuid().required(),
+    sender_id: Joi.string().required(),
     src_url: Joi.string(),
     image_url: Joi.string(),
-    created_at: Joi.number(),
-    updated_at: Joi.number()
+    created_at: Joi.number().required(),
+    updated_at: Joi.number().required(),
+    sender: {
+      provider: Joi.string(),
+      id: Joi.string()
+    }
   },
 
   tableName: `${process.env.RESOURCE_PREFIX}photos`
 });
 
+
+function injectSenderId(attrs) {
+  if (attrs.sender && attrs.sender.provider && attrs.sender.id) {
+    attrs.sender_id = `${attrs.sender.provider}:${attrs.sender.id}`;
+  }
+  else {
+    attrs.sender_id = undefined;
+  }
+}
 
 const Photo = {
   _model: model,
@@ -52,17 +65,21 @@ const Photo = {
       created_at: now,
       updated_at: now
     }, attrs);
+    injectSenderId(attrs_)
     return promisify(model.create)(attrs_).then(() => attrs_);
   },
 
   update: (attrs = {}) => {
-    const attrs_ = Object.assign({}, attrs);
-    attrs_.updated_at = Date.now();
+    const now = Date.now();
+    const attrs_ = Object.assign({}, attrs, {
+      updated_at: now
+    });
+    injectSenderId(attrs_)
     return promisify(model.update)(attrs_).then(() => attrs_);
   },
 
   find: (id) => {
-    return promisify(model.get)(id).then(item => item.attrs);
+    return promisify(model.get)(id).then(item => item ? item.attrs : undefined);
   },
 
   count: () => {

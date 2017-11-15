@@ -18,7 +18,17 @@
             "S": "https://agrishot.test/path/to/image.jpg?xxx=abcdef"
           },
           "sender_id": {
-            "S": "6789012345678901"
+            "S": "facebook:6789012345678901"
+          },
+          "sender": {
+            "M": {
+              "provider": {
+                "S": "facebook"
+              },
+              "id": {
+                "S": "6789012345678901"
+              }
+            }
           },
           "created_at": {
             "N": "1509086812334"
