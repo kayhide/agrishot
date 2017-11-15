@@ -5,6 +5,11 @@ const fs = require('fs');
 const path = require('path');
 const co = require('co');
 
+
+if (!process.env.USE_REMOTE) {
+  console.log('using localstack...');
+}
+
 const repl = require('repl').start({ useGlobal: true });
 
 const history = path.join(os.homedir(), '.node_repl_history');
@@ -33,9 +38,26 @@ const boot = require('./boot');
 co(function *() {
   yield boot();
 
-  repl.context.Base = require('../app/models/base');
-  repl.context.Photo = require('../app/models/photo');
-
+  setModels();
 }).catch(err => {
   console.log(err);
 });
+
+
+function setModels() {
+  if (process.env.USE_REMOTE) {
+    repl.context.Photo = require('../app/models/photo');
+  }
+  else {
+    const Localstack = require('../lib/localstack');
+    const proxyquire = require('proxyquire');
+    const stub = {
+      'aws-sdk': {
+        DynamoDB: Localstack.DynamoDB,
+        S3: Localstack.S3,
+        '@global': true
+      }
+    }
+    repl.context.Photo = proxyquire('../app/models/photo', stub);
+  }
+};
