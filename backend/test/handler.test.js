@@ -207,6 +207,13 @@ describe('#recognize', () => {
       });
     });
 
+    it('calls predictor.predict with image_url', () => {
+      return handle(event, {}).then((res) => {
+        assert(predictor.predict.calledOnce);
+        assert(predictor.predict.getCall(0).args[0].startsWith('http://localhost:4572/agrishot-test-photos/'));
+      });
+    });
+
     it('stores image to bucket', () => {
       const s3 = new Localstack.S3();
       const params = { Bucket: 'agrishot-test-photos' };

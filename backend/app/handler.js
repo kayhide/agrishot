@@ -58,7 +58,8 @@ module.exports.recognize = (event, context, callback) => {
     if (!photo.src_url) { throw new Error("`Photo#src_url` is not present") }
 
     const meta = yield Photo.store(photo);
-    yield Photo.update({ id: photo.id, image_url: meta.Location });
+    photo.image_url = meta.Location;
+    yield Photo.update(photo);
 
     const predictions = yield Predictor.predict(photo.image_url);
     const items = predictions.slice(0, 2).map((item) => `${item.Tag} ${Math.floor(item.Probability * 100)}%`);
