@@ -1,26 +1,36 @@
 module Model.Photo where
 
-import Control.Monad (map, (=<<))
+import Prelude
+
 import Control.Monad.Except (mapExcept)
 import Data.DateTime (DateTime)
 import Data.DateTime.Instant (instant, toDateTime)
 import Data.Either (Either(..), either)
-import Data.Foreign (F, Foreign, ForeignError(..), readNumber, readString, tagOf)
-import Data.Foreign.Class (class Decode)
+import Data.Foreign (F, Foreign, ForeignError(TypeMismatch), readNullOrUndefined, readNumber, tagOf)
+import Data.Foreign.Class (class Decode, decode)
+import Data.Foreign.Generic (defaultOptions, genericDecode)
 import Data.Foreign.Index ((!))
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.List.NonEmpty as NEL
-import Data.Maybe (maybe)
+import Data.Maybe (Maybe, maybe)
 import Data.Time.Duration (Milliseconds(..))
-import Prelude (class Show, bind, const, pure, ($), (<<<))
+import Data.Traversable (traverse)
 
 
 newtype Photo =
   Photo
   { id :: String
+  , sender_id :: String
+  , sender :: Maybe Sender
   , image_url :: String
   , created_at :: DateTime
+  }
+
+newtype Sender =
+  Sender
+  { id :: String
+  , provider :: String
   }
 
 derive instance genericPhoto :: Generic Photo _
@@ -29,10 +39,19 @@ instance showPhoto :: Show Photo where
 
 instance decodePhoto :: Decode Photo where
   decode v = do
-    id <- readString =<< v ! "id"
-    image_url <- readString =<< v ! "image_url"
+    id <- decode =<< v ! "id"
+    sender_id <- decode =<< v ! "sender_id"
+    sender <- traverse decode =<< readNullOrUndefined =<< v ! "sender"
+    image_url <- decode =<< v ! "image_url"
     created_at <- readDateTime =<< v ! "created_at"
-    pure $ Photo { id, image_url, created_at }
+    pure $ Photo { id, sender_id, sender: sender, image_url, created_at }
+
+derive instance genericSender :: Generic Sender _
+instance showSender :: Show Sender where
+  show = genericShow
+
+instance decodeSender :: Decode Sender where
+  decode = genericDecode $ defaultOptions { unwrapSingleConstructors = true }
 
 readDateTime :: Foreign -> F DateTime
 readDateTime value = mapExcept (either (const error) fromNumber) (readNumber value)

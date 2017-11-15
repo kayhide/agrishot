@@ -16,7 +16,7 @@ import Data.Traversable (traverse)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Properties as HP
-import Model.Photo (Photo(..))
+import Model.Photo (Photo(..), Sender(..))
 
 
 data Query a
@@ -80,7 +80,7 @@ render state =
         HH.i [ HP.class_ $ H.ClassName "fa fa-spinner fa-pulse fa-3x" ] []
       ]
 
-    renderItem (Photo { id, image_url, created_at }) =
+    renderItem (Photo { id, sender_id, image_url, created_at, sender }) =
       HH.div
       [ HP.classes [ H.ClassName "col-md-2", H.ClassName "col-sm-6", H.ClassName "col-xs-12" ] ]
       [ HH.div
@@ -89,14 +89,32 @@ render state =
         , HH.div
           [ HP.classes [ H.ClassName "card-body" ] ]
           [ HH.p
-            [ HP.classes [ H.ClassName "card-text" ] ]
-            [ HH.text id ]
+            [ HP.classes [ H.ClassName "card-text small" ] ]
+            [
+              HH.i
+              [ HP.class_ $ H.ClassName "fa fa-user"
+              , HP.title sender_id
+              ] []
+            , renderSender sender
+            ]
           , HH.p
             [ HP.classes [ H.ClassName "card-text", H.ClassName "text-muted", H.ClassName "small" ] ]
             [ renderDateTime created_at ]
           ]
         ]
       ]
+
+    renderSender (Just (Sender { provider, id })) =
+      HH.div_
+      [
+        HH.div
+        [ HP.class_ $ H.ClassName "text-primary" ]
+        [ HH.text provider ]
+      , HH.div
+        [ HP.class_ $ H.ClassName "text-primary" ]
+        [ HH.text id ]
+      ]
+    renderSender Nothing = HH.div_ []
 
     renderDateTime dt =
       HH.text $ either id id $ formatDateTime "YYYY/MM/DD hh:mm:ss" dt
