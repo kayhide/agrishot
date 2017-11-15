@@ -5,11 +5,11 @@ import Prelude
 import Aws.Cognito (COGNITO)
 import Aws.Cognito as Cognito
 import Aws.Config (AwsConfig)
-import Control.Monad.Aff (Aff, attempt)
+import Control.Monad.Aff (Aff, Error, attempt)
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Control.Monad.Maybe.Trans (lift)
 import Control.Monad.State (class MonadState)
-import Data.Either (Either(..))
+import Data.Either (Either(..), either)
 import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.Newtype (unwrap)
 import Facebook.Sdk as FB
@@ -143,10 +143,12 @@ eval (Authenticate next) = do
       Cognito.setRegion config.awsRegion
       Cognito.setIdentityPoolId config.awsIdentityPoolId
       Cognito.setFacebookToken token
-    awsConfig <- lift $ H.liftAff $ Cognito.authenticate
+    awsConfig <- verifyAuth =<< H.liftAff (attempt Cognito.authenticate)
     lift $ do
       H.modify _{ awsConfig = Just awsConfig }
       H.raise $ Authenticated awsConfig
+
+  either (H.raise <<< Failed) pure res
 
   pure next
 
@@ -161,3 +163,9 @@ verifyFacebookSdk =
 verifyFacebookAccessToken :: forall m. MonadState State m => ExceptT String m String
 verifyFacebookAccessToken =
   onNothing "Facebook login not done" =<< (lift $ H.gets _.facebookAccessToken)
+
+onLeft :: forall e m. Monad m => String -> Either e ~> ExceptT String m
+onLeft s = either (throwError <<< const s) pure
+
+verifyAuth :: forall m. Monad m => Either Error AwsConfig -> ExceptT String m AwsConfig
+verifyAuth = onLeft "Authentication failed"
