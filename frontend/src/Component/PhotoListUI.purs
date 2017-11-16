@@ -12,6 +12,8 @@ import Data.Foreign (Foreign)
 import Data.Foreign.Class (decode)
 import Data.Formatter.DateTime (formatDateTime)
 import Data.Maybe (Maybe(..))
+import Data.String (Pattern(..), Replacement(..))
+import Data.String as String
 import Data.Traversable (traverse)
 import Halogen as H
 import Halogen.HTML as HH
@@ -85,7 +87,12 @@ render state =
       [ HP.classes [ H.ClassName "col-md-2", H.ClassName "col-sm-6", H.ClassName "col-xs-12" ] ]
       [ HH.div
         [ HP.classes [ H.ClassName "card", H.ClassName "mb-2" ] ]
-        [ HH.img [ HP.src image_url, HP.class_ $ H.ClassName "card-img-top" ]
+        [
+          HH.a
+          [ HP.href image_url, HP.target "_blank" ]
+          [
+            HH.img [ HP.src thumbnail_url, HP.class_ $ H.ClassName "card-img-top" ]
+          ]
         , HH.div
           [ HP.classes [ H.ClassName "card-body" ] ]
           [ HH.p
@@ -103,6 +110,8 @@ render state =
           ]
         ]
       ]
+      where
+        thumbnail_url = String.replace (Pattern "photos.") (Replacement "photos-thumbnail.") image_url
 
     renderSender (Just (Sender { provider, id })) =
       HH.div_
