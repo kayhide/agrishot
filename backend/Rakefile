@@ -1,0 +1,57 @@
+require 'json'
+require 'thor/shell'
+require 'pry'
+
+$stage = ENV.fetch('STAGE', 'dev')
+
+def say_status *args
+  @shell ||= Thor::Base.shell.new
+  @shell.say_status *args
+end
+
+@event = <<"EOS"
+{
+  "Records": [
+    {
+      "s3": {
+        "s3SchemaVersion": "1.0",
+        "bucket": {
+          "name": "agrishot-#{$stage}-photos",
+          "arn": "arn:aws:s3:::agrishot-#{$stage}-photos"
+        },
+        "object": {
+          "key": "${KEY}"
+        }
+      }
+    }
+  ]
+}
+EOS
+
+task :read_photos_bucket do
+  bucket = "s3://agrishot-#{$stage}-photos"
+  lines = `aws s3 ls #{bucket}`.lines
+  @keys = lines.grep(/.*\.jpg/).map { |l| l.chomp.split.last }
+end
+
+desc 'Regenerate thumbnails invoking photos-thumbnail'
+task :regenerate_thumbnails => :read_photos_bucket do
+  begin
+    f = '../tmp/_event.json'
+    @keys.each do |k|
+      e = @event.sub(/\${KEY}/, k)
+      open(f, 'w') do |io|
+        io << e
+      end
+      res = `sls invoke -f photos-thumbnail -p #{f}`
+      raise RuntimeError.new(res) if res.include? 'Invoked function failed'
+      say_status :create, k, :green
+    end
+
+  rescue RuntimeError => err
+    puts err.message
+  ensure
+    File.delete f
+  end
+end
+
