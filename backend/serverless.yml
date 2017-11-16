@@ -119,7 +119,7 @@ resources:
               ReadCapacityUnits: 1
               WriteCapacityUnits: 1
 
-    PhotosS3Bucket:
+    S3BucketPhotos:
       Type: 'AWS::S3::Bucket'
       # DeletionPolicy: Retain
       Properties:
