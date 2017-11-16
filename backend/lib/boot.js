@@ -19,9 +19,17 @@ function injectEnv(config) {
   });
 }
 
+let config;
+
 module.exports = function() {
-  return readConfig().then(conf => {
-    injectEnv(conf)
-    return Promise.resolve(conf);
-  });
+  if (config) {
+    return Promise.resolve(config);
+  }
+  else {
+    return readConfig().then(c => {
+      config = c;
+      injectEnv(c)
+      return c;
+    });
+  }
 };
