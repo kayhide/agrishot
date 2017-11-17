@@ -53,24 +53,24 @@ package:
     - node_modules/aws-sdk/**
 
 functions:
-  challenge:
-    handler: app/handler.challenge
+  facebook-challenge:
+    handler: app/facebook/handler.challenge
     events:
       - http:
-          path: webhook
+          path: webhook/facebook
           method: get
           cors: true
 
-  receive:
-    handler: app/handler.receive
+  facebook-receive:
+    handler: app/facebook/handler.receive
     events:
       - http:
-          path: webhook
+          path: webhook/facebook
           method: post
           cors: true
 
-  recognize:
-    handler: app/handler.recognize
+  photos-recognize:
+    handler: app/photos/handler.recognize
     timeout: 10
     events:
       - stream:

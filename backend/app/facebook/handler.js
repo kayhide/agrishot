@@ -1,13 +1,11 @@
 'use strict';
 
 const co = require('co');
-const promisify = require('util.promisify');
 
-const Photo = require('./models/photo');
-const Messenger = require('./messenger');
-const Predictor = require('./predictor');
+const Photo = require('../models/photo');
+const Messenger = require('../messenger');
 
-const locale = require('./locale');
+const locale = require('../locale');
 const t = locale.translations('ja');
 
 module.exports.challenge = (event, context, callback) => {
@@ -47,31 +45,5 @@ module.exports.receive = (event, context, callback) => {
   }).catch((err) => {
     console.log(err);
     callback(null, { statusCode: 403, body: err });
-  });
-};
-
-module.exports.recognize = (event, context, callback) => {
-  // console.log(JSON.stringify(event));
-  if (event.Records[0].eventName !== 'INSERT') {
-    return callback(null, { message: 'Skipping non INSERT event', event });
-  }
-  co(function *() {
-    const data = event.Records[0].dynamodb.NewImage;
-    const photo = Photo.unmarshall(data);
-    if (!photo.src_url) { throw new Error("`Photo#src_url` is not present") }
-
-    const meta = yield Photo.store(photo);
-    photo.image_url = meta.Location;
-    yield Photo.update(photo);
-
-    const predictions = yield Predictor.predict(photo.image_url);
-    const items = predictions.slice(0, 2).map((item) => `${item.Tag} ${Math.floor(item.Probability * 100)}%`);
-
-    yield Messenger.send(photo.sender.id, t.predictions(items));
-    yield Messenger.send(photo.sender.id, t.will_be_in_touch_soon);
-    callback(null, { message: 'Recognize successfully called', event });
-  }).catch((err) => {
-    console.log(err);
-    callback(null, { message: 'Recognize failed', event });
   });
 };
