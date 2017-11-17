@@ -11,10 +11,10 @@ const inits = {
 process.env.STAGE = process.env.STAGE || 'dev';
 
 co(function *() {
-  yield boot();
+  const config = yield boot();
   for (let x in inits) {
     console.log(`  ${process.env.STAGE} init: ${x}`)
-    yield inits[x].run()
+    yield inits[x].run(config)
   }
 }).catch((err) => {
   console.log('Failed:');
