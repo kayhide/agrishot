@@ -3,7 +3,7 @@ service: agrishot
 provider:
   name: aws
   runtime: nodejs6.10
-  stage: ${env:STAGE, 'dev'}
+  stage: ${env:STAGE, "dev"}
   region: ap-northeast-1
   profile: ${self:service}-${self:provider.stage}-deploy
   iamRoleStatements:
@@ -16,15 +16,17 @@ provider:
         - dynamodb:PutItem
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
-      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.RESOURCE_PREFIX}photos"
+      Resource:
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.RESOURCE_PREFIX}photos"
     - Effect: Allow
       Action:
         - dynamodb:GetRecords
         - dynamodb:GetShardIterator
         - dynamodb:DescribeStream
         - dynamodb:ListStreams
-      Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.RESOURCE_PREFIX}photos/stream/*"
-      # Resource: "arn:aws:dynamodb:${self:provider.region}:*:*"
+      Resource:
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.RESOURCE_PREFIX}photos/stream/*"
+        # - "arn:aws:dynamodb:${self:provider.region}:*:*"
     - Effect: Allow
       Action:
         - s3:GetObject
@@ -76,7 +78,9 @@ functions:
       - stream:
           type: dynamodb
           arn:
-            Fn::GetAtt: [PhotosDynamoDbTable, StreamArn]
+            Fn::GetAtt:
+              - PhotosDynamoDbTable
+              - StreamArn
           batchSize: 1
 
   photos-thumbnail:
@@ -89,7 +93,7 @@ functions:
 resources:
   Resources:
     PhotosDynamoDbTable:
-      Type: 'AWS::DynamoDB::Table'
+      Type: "AWS::DynamoDB::Table"
       # DeletionPolicy: Retain
       Properties:
         TableName: ${self:provider.environment.RESOURCE_PREFIX}photos
@@ -129,7 +133,7 @@ resources:
               WriteCapacityUnits: 1
 
     S3BucketPhotos:
-      Type: 'AWS::S3::Bucket'
+      Type: "AWS::S3::Bucket"
       # DeletionPolicy: Retain
       Properties:
         BucketName: ${self:provider.environment.RESOURCE_PREFIX}photos
@@ -142,7 +146,7 @@ resources:
                 - "*"
 
     S3BucketPhotosThumbnail:
-      Type: 'AWS::S3::Bucket'
+      Type: "AWS::S3::Bucket"
       # DeletionPolicy: Retain
       Properties:
         BucketName: ${self:provider.environment.RESOURCE_PREFIX}photos-thumbnail
@@ -158,7 +162,7 @@ resources:
       Type: "AWS::Lambda::Permission"
       Properties:
         FunctionName:
-          "Fn::GetAtt":
+          Fn::GetAtt:
             - PhotosDashthumbnailLambdaFunction
             - Arn
         Principal: "s3.amazonaws.com"
