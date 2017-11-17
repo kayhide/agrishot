@@ -8,9 +8,9 @@ const sinon = require('sinon');
 const proxyquire = require('proxyquire');
 const nock = require('nock');
 
-const helper = require('../test-helper');
-const fixture = require('../fixture');
-const Localstack = require('../../lib/localstack');
+const helper = require('test/test-helper');
+const fixture = require('test/fixture');
+const Localstack = require('lib/localstack');
 
 const awsStub = {
   DynamoDB: Localstack.DynamoDB,
@@ -26,7 +26,7 @@ describe('#challenge', () => {
     const stub = {
       'aws-sdk': awsStub
     };
-    const handler = proxyquire('../../app/facebook/handler', stub);
+    const handler = proxyquire('app/facebook/handler', stub);
     event = {
       'queryStringParameters': {
         'hub.mode': 'subscribe',
@@ -76,15 +76,15 @@ describe('#receive', () => {
     }
     const stub = {
       'aws-sdk': awsStub,
-      '../messenger': messenger,
-      './locale/ja': {
+      'app/messenger': messenger,
+      'app/locale/ja': {
         received_text: 'Received text!',
         received_image: 'Received image!',
         will_be_in_touch_soon: 'Will be in touch soon!',
         '@global': true
       }
     };
-    const handler = proxyquire('../../app/facebook/handler', stub);
+    const handler = proxyquire('app/facebook/handler', stub);
     handle = promisify(handler.receive.bind(handler));
   });
 
@@ -128,7 +128,7 @@ describe('#receive', () => {
     });
 
     it('creates a photo record', () => {
-      const Photo = proxyquire('../../app/models/photo', { 'aws-sdk': awsStub })
+      const Photo = proxyquire('app/models/photo', { 'aws-sdk': awsStub })
       return co(function *() {
         const org = yield Photo.count();
         yield handle(event, {});

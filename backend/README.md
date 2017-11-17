@@ -25,7 +25,20 @@ Start LocalStack:
 $ yarn run localstack
 ```
 
-LocalStack is required when we run tests.
+Create resources on LocalStack:
+
+```sh
+$ yarn run localstack:setup:all
+```
+
+This command creates resources for both STAGE of `dev` and `test` .
+
+If wanted specifically:
+
+```sh
+$ yarn run localstack:setup               # for dev
+$ STAGE=test yarn run localstack:setup    # for test
+```
 
 Run tests:
 
@@ -85,3 +98,10 @@ For `prod` stage:
 ```sh
 $ STAGE=prod yarn run deploy
 ```
+
+
+## NODE_PATH
+
+We assume `NODE_PATH` includes the frontend root dir and avoid to call `require` with relative paths.
+
+In tests, `proxyquire` goes like so.

@@ -7,7 +7,7 @@ const promisify = require('util.promisify');
 const sinon = require('sinon');
 const _ = require('lodash');
 
-const Localstack = require('./localstack');
+const Localstack = require('lib/localstack');
 
 module.exports = {
   createResources(config) {

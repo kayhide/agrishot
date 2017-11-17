@@ -2,10 +2,10 @@
 
 const co = require('co');
 
-const Photo = require('../models/photo');
-const Messenger = require('../messenger');
+const Photo = require('app/models/photo');
+const Messenger = require('app/messenger');
 
-const locale = require('../locale');
+const locale = require('app/locale');
 const t = locale.translations('ja');
 
 module.exports.challenge = (event, context, callback) => {

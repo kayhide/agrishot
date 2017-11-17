@@ -33,7 +33,7 @@ repl.context.capture = (err, data) => {
 }
 
 
-const boot = require('./boot');
+const boot = require('lib/boot');
 
 co(function *() {
   yield boot();
@@ -46,10 +46,10 @@ co(function *() {
 
 function setModels() {
   if (process.env.USE_REMOTE) {
-    repl.context.Photo = require('../app/models/photo');
+    repl.context.Photo = require('app/models/photo');
   }
   else {
-    const Localstack = require('../lib/localstack');
+    const Localstack = require('lib/localstack');
     const proxyquire = require('proxyquire');
     const stub = {
       'aws-sdk': {
@@ -58,6 +58,6 @@ function setModels() {
         '@global': true
       }
     }
-    repl.context.Photo = proxyquire('../app/models/photo', stub);
+    repl.context.Photo = proxyquire('app/models/photo', stub);
   }
 };

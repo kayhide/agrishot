@@ -8,9 +8,9 @@ const co = require('co');
 const promisify = require('util.promisify');
 const stream = require('stream');
 
-const boot = require('../lib/boot');
+const boot = require('lib/boot');
 
-const fixture = require('./fixture');
+const fixture = require('test/fixture');
 
 let config;
 
@@ -22,7 +22,7 @@ before((done) => {
 });
 
 beforeEach((done) => {
-  const helper = require('../lib/helper');
+  const helper = require('lib/helper');
   co(function *() {
     const resources = config.resources && config.resources.Resources || [];
     for (let x in resources) {

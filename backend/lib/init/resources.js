@@ -1,9 +1,9 @@
 'use strict';
 
 const co = require('co');
-const boot = require('../boot');
+const boot = require('lib/boot');
 
-const helper = require('../helper');
+const helper = require('lib/helper');
 
 module.exports.run = () => {
   return co(function *() {

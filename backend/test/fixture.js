@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const co = require('co');
-const helper = require('../lib/helper');
+const helper = require('lib/helper');
 
 module.exports = {
   read(name) {

@@ -12,10 +12,10 @@ const gm = require('gm').subClass({ imageMagick: true });
 const getObject = promisify(s3.getObject.bind(s3));
 const putObject = promisify(s3.putObject.bind(s3));
 
-const Photo = require('../models/photo');
-const Messenger = require('../messenger');
-const Predictor = require('../predictor');
-const locale = require('../locale');
+const Photo = require('app/models/photo');
+const Messenger = require('app/messenger');
+const Predictor = require('app/predictor');
+const locale = require('app/locale');
 const t = locale.translations('ja');
 
 

@@ -8,9 +8,9 @@ const sinon = require('sinon');
 const proxyquire = require('proxyquire');
 const nock = require('nock');
 
-const helper = require('../test-helper');
-const fixture = require('../fixture');
-const Localstack = require('../../lib/localstack');
+const helper = require('test/test-helper');
+const fixture = require('test/fixture');
+const Localstack = require('lib/localstack');
 
 const awsStub = {
   DynamoDB: Localstack.DynamoDB,
@@ -52,9 +52,9 @@ describe('#recognize', () => {
     }
     const stub = {
       'aws-sdk': awsStub,
-      '../messenger': messenger,
-      '../predictor': predictor,
-      './locale/ja': {
+      'app/messenger': messenger,
+      'app/predictor': predictor,
+      'app/locale/ja': {
         received_text: 'Received text!',
         received_image: 'Received image!',
         will_be_in_touch_soon: 'Will be in touch soon!',
@@ -62,7 +62,7 @@ describe('#recognize', () => {
         '@global': true
       }
     };
-    const handler = proxyquire('../../app/photos/handler', stub);
+    const handler = proxyquire('app/photos/handler', stub);
     handle = promisify(handler.recognize.bind(handler));
   });
 
@@ -114,7 +114,7 @@ describe('#recognize', () => {
     });
 
     it('updates photo record', () => {
-      const Photo = proxyquire('../../app/models/photo', { 'aws-sdk': awsStub })
+      const Photo = proxyquire('app/models/photo', { 'aws-sdk': awsStub })
       return co(function *() {
         const org = Photo.unmarshall(event.Records[0].dynamodb.NewImage);
         yield handle(event, {});
@@ -140,7 +140,7 @@ describe('#photos-thumbnail', () => {
       'aws-sdk': awsStub,
       '@global': true
     };
-    const handler = proxyquire('../../app/photos/handler', stub);
+    const handler = proxyquire('app/photos/handler', stub);
     handle = promisify(handler.thumbnail.bind(handler));
   });
 

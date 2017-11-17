@@ -2,10 +2,10 @@
 
 const co = require('co');
 
-const boot = require('./boot');
+const boot = require('lib/boot');
 
 const inits = {
-  resources: require('./init/resources')
+  resources: require('lib/init/resources')
 }
 
 process.env.STAGE = process.env.STAGE || 'dev';
@@ -13,7 +13,7 @@ process.env.STAGE = process.env.STAGE || 'dev';
 co(function *() {
   yield boot();
   for (let x in inits) {
-    console.log(`  init: ${x}`)
+    console.log(`  ${process.env.STAGE} init: ${x}`)
     yield inits[x].run()
   }
 }).catch((err) => {
