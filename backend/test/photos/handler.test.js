@@ -68,7 +68,7 @@ describe('#recognize', () => {
 
   context('with a new photo records', () => {
     beforeEach(() => {
-      event = fixture.read('recognize_event');
+      event = fixture.read('photos_recognize_event');
       nock('https://agrishot.test')
         .get('/path/to/image.jpg?xxx=abcdef')
         .reply(200, (uri, requestBody) => fs.createReadStream(fixture.join('image.jpg')));

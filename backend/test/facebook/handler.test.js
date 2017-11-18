@@ -88,7 +88,7 @@ describe('#receive', () => {
   context('with text message', () => {
     beforeEach(() => {
       event = {
-        body: JSON.stringify(fixture.read('receive_event'))
+        body: JSON.stringify(fixture.read('facebook_receive_event_text'))
       };
     });
 
@@ -116,7 +116,7 @@ describe('#receive', () => {
   context('with image message', () => {
     beforeEach(() => {
       event = {
-        body: JSON.stringify(fixture.read('receive_event_image'))
+        body: JSON.stringify(fixture.read('facebook_receive_event_image'))
       };
     });
 
