@@ -19,7 +19,7 @@ const awsStub = {
   '@global': true
 }
 
-describe('#challenge', () => {
+describe('#facebook-challenge', () => {
   let event;
   let handle;
 
@@ -65,7 +65,7 @@ describe('#challenge', () => {
 });
 
 
-describe('#receive', () => {
+describe('#facebook-receive', () => {
   let event;
   let handle;
 

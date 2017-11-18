@@ -20,7 +20,7 @@ const awsStub = {
 
 const s3 = new Localstack.S3();
 
-describe('#recognize', () => {
+describe('#photos-recognize', () => {
   let event;
   let handle;
   let messenger;
