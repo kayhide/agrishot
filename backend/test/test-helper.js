@@ -7,14 +7,16 @@ const mime = require('mime');
 const co = require('co');
 const promisify = require('util.promisify');
 const stream = require('stream');
+const nock = require('nock');
 
 const boot = require('lib/boot');
-
 const fixture = require('test/fixture');
 
 let config;
 
 before((done) => {
+  nock.enableNetConnect('localhost');
+
   co(function *() {
     config = yield boot();
     done();

@@ -21,7 +21,10 @@ module.exports.challenge = (event, context, callback) => {
 module.exports.receive = (event, context, callback) => {
   const body = JSON.parse(event['body']);
   const messaging = body.entry[0].messaging[0];
-  const senderId = messaging.sender.id;
+  const sender = {
+    provider: 'facebook',
+    id: messaging.sender.id
+  };
   const text = messaging.message.text;
   const attachments = messaging.message.attachments;
 
@@ -30,16 +33,13 @@ module.exports.receive = (event, context, callback) => {
       const src = attachments[0].payload.url;
       const photo = Photo.build({
         src_url: src,
-        sender: {
-          provider: 'facebook',
-          id: senderId
-        }
+        sender: sender
       });
       yield Photo.create(photo);
-      yield Messenger.send(senderId, t.received_image);
+      yield Messenger.send(sender, t.received_image);
     }
     else {
-      yield Messenger.send(senderId, t.received_text);
+      yield Messenger.send(sender, t.received_text);
     }
     callback(null, { statusCode: 200 });
   }).catch((err) => {

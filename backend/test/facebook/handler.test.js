@@ -4,13 +4,14 @@ const fs = require('fs');
 const co = require('co');
 const promisify = require('util.promisify');
 const assert = require('power-assert');
-const sinon = require('sinon');
 const proxyquire = require('proxyquire');
 const nock = require('nock');
 
 const helper = require('test/test-helper');
 const fixture = require('test/fixture');
 const Localstack = require('lib/localstack');
+
+
 
 const awsStub = {
   DynamoDB: Localstack.DynamoDB,
@@ -67,16 +68,10 @@ describe('#challenge', () => {
 describe('#receive', () => {
   let event;
   let handle;
-  let messenger;
-  let locale;
 
   beforeEach(() => {
-    messenger = {
-      send: sinon.stub().returns(Promise.resolve())
-    }
     const stub = {
       'aws-sdk': awsStub,
-      'app/messenger': messenger,
       'app/locale/ja': {
         received_text: 'Received text!',
         received_image: 'Received image!',
@@ -86,6 +81,8 @@ describe('#receive', () => {
     };
     const handler = proxyquire('app/facebook/handler', stub);
     handle = promisify(handler.receive.bind(handler));
+
+    nock('https://graph.facebook.com').post(/.*/).reply(200);
   });
 
   context('with text message', () => {
@@ -101,11 +98,17 @@ describe('#receive', () => {
       });
     });
 
-    it('calls messenger.send with locale.ja.received_text', () => {
-      return handle(event, {}).then((res) => {
-        assert(messenger.send.calledOnce);
-        assert(messenger.send.getCall(0).args[0] === '6789012345678901');
-        assert(messenger.send.getCall(0).args[1] === 'Received text!');
+    it('posts a message to facebook', () => {
+      nock.cleanAll();
+      const scope = nock('https://graph.facebook.com', { "encodedQueryParams": true })
+            .post('/v2.6/me/messages', {
+              "recipient": { "id": "6789012345678901" },
+              "message": { "text": "Received text!" },
+              "access_token": "xxxxxxxxxxxxxxxx"
+            }).reply(200);
+      return co(function *() {
+        yield handle(event, {});
+        scope.done();
       });
     });
   });
@@ -117,13 +120,17 @@ describe('#receive', () => {
       };
     });
 
-    it('calls messenger.send once with some text', () => {
-      const db = new Localstack.DynamoDB.DocumentClient();
+    it('posts a message to facebook', () => {
+      nock.cleanAll();
+      const scope = nock('https://graph.facebook.com', { "encodedQueryParams": true })
+            .post('/v2.6/me/messages', {
+              "recipient": { "id": "6789012345678901" },
+              "message": { "text": "Received image!" },
+              "access_token": "xxxxxxxxxxxxxxxx"
+            }).reply(200);
       return co(function *() {
         yield handle(event, {});
-        assert(messenger.send.calledOnce);
-        assert(messenger.send.getCall(0).args[0] === '6789012345678901');
-        assert(messenger.send.getCall(0).args[1] === 'Received image!');
+        scope.done();
       });
     });
 
