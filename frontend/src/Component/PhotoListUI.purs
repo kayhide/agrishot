@@ -155,14 +155,13 @@ eval = case _ of
 
       case items of
         Left err -> do
-          H.modify _{ items = [], alerts = [show err] }
+          H.modify _{ items = [], alerts = [show err], busy = false }
           H.raise $ Failed "DynamoDB scan failed"
 
         Right items_ -> do
-          H.modify _{ items = items_, alerts = [] }
+          H.modify _{ items = items_, alerts = [], busy = false }
           H.raise $ Scanned items_
 
-    H.modify _{ busy = false }
     pure next
 
   GetState reply -> do

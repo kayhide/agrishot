@@ -175,6 +175,7 @@ eval = case _ of
 
   HandleLogin (LoginUI.Failed s) next -> do
     postAlert s
+    H.modify _{ awsAuthenticated = false }
     pure next
 
   HandlePhotoList (PhotoListUI.Scanned photos) next -> do
@@ -183,7 +184,8 @@ eval = case _ of
     pure next
 
   HandlePhotoList (PhotoListUI.Failed s) next -> do
-    postAlert s
+    postInfo "Reauthenticating..."
+    void $ H.query' cpLogin LoginSlot $ H.action LoginUI.LoginFacebook
     pure next
 
   RequestScanPhotoList next -> do
