@@ -1,5 +1,5 @@
 module.exports = {
-  reply: (receiver, text) => {
+  sendText: (receiver, text) => {
     return {
       method: 'POST',
       uri: 'https://graph.facebook.com/v2.6/me/messages',
@@ -16,6 +16,10 @@ module.exports = {
         'access_token': process.env.FACEBOOK_PAGE_ACCESS_TOKEN
       }
     };
+  },
+
+  reply: (receiver, texts) => {
+    return texts.map(t => this.sendText(receiver, t));
   },
 
   get: (url) => {

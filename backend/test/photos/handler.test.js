@@ -1,5 +1,6 @@
 'use strict';
 
+const _ = require('lodash');
 const fs = require('fs');
 const co = require('co');
 const promisify = require('util.promisify');
@@ -24,7 +25,7 @@ describe('#photos-recognize', () => {
 
   beforeEach(() => {
     messenger = {
-      sendText: sinon.stub().returns(Promise.resolve())
+      replyTexts: sinon.stub().returns(Promise.resolve())
     }
     predictor = {
       predict: sinon.stub().returns(Promise.resolve([
@@ -69,15 +70,18 @@ describe('#photos-recognize', () => {
         .reply(200, (uri, requestBody) => fs.createReadStream(fixture.join('image.jpg')));
     });
 
-    it('calls messenger.sendText with a text', () => {
+    it('calls messenger.replyTexts with a text', () => {
       return handle(event, {}).then((res) => {
-        assert(messenger.sendText.calledTwice);
-        assert(messenger.sendText.getCall(0).args[0].provider === 'facebook');
-        assert(messenger.sendText.getCall(0).args[0].id  === '6789012345678901');
-        assert(messenger.sendText.getCall(0).args[1] === 'Predictions:\nMikan Sabi Dani 98%\nChano Hokori Dani 31%');
-        assert(messenger.sendText.getCall(1).args[0].provider === 'facebook');
-        assert(messenger.sendText.getCall(1).args[0].id  === '6789012345678901');
-        assert(messenger.sendText.getCall(1).args[1] === 'Will be in touch soon!');
+        assert(messenger.replyTexts.calledOnce);
+        assert(messenger.replyTexts.getCall(0).args[0].provider === 'facebook');
+        assert(messenger.replyTexts.getCall(0).args[0].id  === '6789012345678901');
+        assert(_.isEqual(
+          messenger.replyTexts.getCall(0).args[1],
+          [
+            'Predictions:\nMikan Sabi Dani 98%\nChano Hokori Dani 31%',
+            'Will be in touch soon!'
+          ]
+        ));
       });
     });
 

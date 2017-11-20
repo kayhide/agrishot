@@ -1,3 +1,5 @@
+const _ = require('lodash');
+const co = require('co');
 const request = require('request');
 const promisify = require('util.promisify');
 const url = require('url');
@@ -17,8 +19,13 @@ const messenger = {
 
 module.exports = {
   sendText(receiver, text) {
-    const req = messenger[receiver.provider].reply(receiver, text);
+    const req = messenger[receiver.provider].sendText(receiver, text);
     return request_(req);
+  },
+
+  replyTexts(sender, texts) {
+    const reqs = messenger[sender.provider].reply(sender, texts);
+    return _.reduce(reqs, (p, req) => p.then(() => request_(req)), Promise.resolve());
   },
 
   storeImage(sender, src, basename) {

@@ -51,6 +51,7 @@ describe('#line-receive', () => {
               "replyToken": "replytokenxxxxxxxxxxxxxxxxxxxxxx",
               "messages": [{ "type":"text", "text":"Received text!" }]
             }).reply(200);
+
       return co(function *() {
         yield handle(event, {});
         scope.done();
@@ -66,20 +67,6 @@ describe('#line-receive', () => {
     it('callbacks with success response', () => {
       return handle(event, {}).then((res) => {
         assert(res.statusCode === 200);
-      });
-    });
-
-    it('posts a message to line', () => {
-      nock.cleanAll();
-      const scope =
-            nock('https://api.line.me', { "encodedQueryParams":true })
-            .post('/v2/bot/message/reply', {
-              "replyToken": "replytokenxxxxxxxxxxxxxxxxxxxxxx",
-              "messages": [{ "type":"text", "text":"Received image!" }]
-            }).reply(200);
-      return co(function *() {
-        yield handle(event, {});
-        scope.done();
       });
     });
 

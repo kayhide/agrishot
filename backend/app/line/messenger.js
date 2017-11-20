@@ -1,6 +1,12 @@
+const _ = require('lodash');
+
 module.exports = {
-  reply: (receiver, text) => {
-    return {
+  sendText: (receiver, text) => {
+    throw new Error('Push message is not ready for LINE');
+  },
+
+  reply: (receiver, texts) => {
+    return [{
       method: 'POST',
       uri: 'https://api.line.me/v2/bot/message/reply',
       headers: {
@@ -9,12 +15,9 @@ module.exports = {
       },
       json: {
         replyToken: receiver.line.reply_token,
-        messages: [{
-          type: 'text',
-          text: text
-        }]
+        messages: texts.map(t => { return { type: 'text', text: t } })
       }
-    };
+    }];
   },
 
   get: (url) => {
