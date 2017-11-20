@@ -9,11 +9,15 @@ import Component.LoginUI as LoginUI
 import Component.NoticeUI as NoticeUI
 import Component.PhotoListUI as PhotoListUI
 import Control.Monad.Aff (Aff)
+import Control.Monad.Eff.Now (NOW)
+import Control.Monad.Eff.Now as Now
 import Control.Monad.State (class MonadState)
 import Data.Array as Array
+import Data.DateTime.Locale (Locale(..), LocaleName(..))
 import Data.Either.Nested (Either3)
 import Data.Functor.Coproduct.Nested (Coproduct3)
 import Data.Maybe (Maybe(..), maybe)
+import Data.Time.Duration (Minutes(..))
 import Halogen as H
 import Halogen.Component.ChildPath as CP
 import Halogen.HTML as HH
@@ -29,7 +33,8 @@ type AppConfig =
   }
 
 data Query a
-  = HandleNotice NoticeUI.Message a
+  = Initialize a
+  | HandleNotice NoticeUI.Message a
   | HandleLogin LoginUI.Message a
   | HandlePhotoList PhotoListUI.Message a
   | RequestScanPhotoList a
@@ -41,6 +46,7 @@ type State =
   , awsAuthenticated :: Boolean
   , notices :: Array NoticeUI.IdNotice
   , noticeLastId :: Int
+  , locale :: Locale
   }
 
 type Input = AppConfig
@@ -71,20 +77,23 @@ cpLogin = CP.cp2
 cpPhotoList :: CP.ChildPath PhotoListUI.Query ChildQuery Unit ChildSlot
 cpPhotoList = CP.cp3
 
-type Eff_ eff = Aff (cognito :: COGNITO, dynamo :: DYNAMO | eff)
+type Eff_ eff = Aff (cognito :: COGNITO, dynamo :: DYNAMO, now :: NOW | eff)
 
 ui :: forall eff. H.Component HH.HTML Query Input Message (Eff_ eff)
 ui =
-  H.parentComponent
+  H.lifecycleParentComponent
     { initialState: { appConfig: _
                     , photosCount: Nothing
                     , awsAuthenticated: false
                     , notices: []
                     , noticeLastId: 0
+                    , locale: Locale (Just (LocaleName "GMT")) (Minutes 0.0)
                     }
     , render
     , eval
     , receiver: const Nothing
+    , initializer: Just $ H.action Initialize
+    , finalizer: Nothing
     }
 
 render :: forall eff. State -> H.ParentHTML Query ChildQuery ChildSlot (Eff_ eff)
@@ -119,7 +128,7 @@ render state =
       , HE.onClick (HE.input_ RequestScanPhotoList)
       ]
       [ HH.text "Update" ]
-    , renderPhotoList $ state.awsAuthenticated
+    , renderPhotoList state.awsAuthenticated state.locale
     ]
   ]
 
@@ -138,9 +147,9 @@ render state =
       then ""
       else " disabled"
 
-    renderPhotoList false = HH.div_ []
-    renderPhotoList true =
-      HH.slot' cpPhotoList unit PhotoListUI.ui tableName $ HE.input HandlePhotoList
+    renderPhotoList false _ = HH.div_ []
+    renderPhotoList true locale =
+      HH.slot' cpPhotoList unit PhotoListUI.ui { tableName, locale } $ HE.input HandlePhotoList
 
     renderNotices = do
       x@{ id, notice } <- state.notices
@@ -148,6 +157,11 @@ render state =
 
 eval :: forall eff. Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message (Eff_ eff)
 eval = case _ of
+  Initialize next -> do
+    locale <- H.liftEff Now.locale
+    H.modify _{ locale = locale }
+    pure next
+
   HandleNotice (NoticeUI.Closed i) next -> do
     notices <- Array.filter ((i /= _) <<< _.id) <$> H.gets _.notices
     H.modify _{ notices = notices }

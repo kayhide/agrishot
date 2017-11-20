@@ -10,6 +10,7 @@ import Control.Monad.Aff.Console (CONSOLE)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (error, throwException)
+import Control.Monad.Eff.Now (NOW)
 import Data.Array as Array
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), split)
@@ -20,7 +21,7 @@ import Halogen.Aff as HA
 import Halogen.VDom.Driver (runUI)
 
 
-type AppEffs = HA.HalogenEffects (meta :: META, cognito :: COGNITO, dynamo :: DYNAMO, console :: CONSOLE)
+type AppEffs = HA.HalogenEffects (meta :: META, cognito :: COGNITO, dynamo :: DYNAMO, now :: NOW, console :: CONSOLE)
 
 main :: Eff AppEffs Unit
 main = HA.runHalogenAff do

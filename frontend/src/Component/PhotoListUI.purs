@@ -6,12 +6,14 @@ import Aws.Dynamo (DYNAMO, scan)
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (runExcept, throwError)
+import Data.DateTime as DateTime
+import Data.DateTime.Locale (Locale(Locale))
 import Data.Either (Either(..), either)
 import Data.Foldable (intercalate)
 import Data.Foreign (Foreign)
 import Data.Foreign.Class (decode)
 import Data.Formatter.DateTime (formatDateTime)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Data.String (Pattern(..), Replacement(..))
 import Data.String as String
 import Data.Traversable (traverse)
@@ -22,7 +24,8 @@ import Model.Photo (Photo(..), Sender(..))
 
 
 data Query a
-  = Scan a
+  = SetLocale Locale a
+  | Scan a
   | GetState (State -> a)
 
 type State =
@@ -30,9 +33,13 @@ type State =
   , items :: Array Photo
   , alerts :: Array String
   , busy :: Boolean
+  , locale :: Locale
   }
 
-type Input = TableName
+type Input =
+  { tableName :: TableName
+  , locale :: Locale
+  }
 
 data Message
   = Scanned (Array Photo)
@@ -52,11 +59,12 @@ ui =
     }
 
 initialState :: Input -> State
-initialState =
-    { tableName: _
+initialState { tableName, locale } =
+    { tableName: tableName
     , items: []
     , alerts: []
     , busy: false
+    , locale: locale
     }
 
 render :: State -> H.ComponentHTML Query
@@ -106,7 +114,7 @@ render state =
             ]
           , HH.p
             [ HP.classes [ H.ClassName "card-text", H.ClassName "text-muted", H.ClassName "small" ] ]
-            [ renderDateTime created_at ]
+            [ renderDateTime created_at state.locale ]
           ]
         ]
       ]
@@ -125,11 +133,17 @@ render state =
       ]
     renderSender Nothing = HH.div_ []
 
-    renderDateTime dt =
-      HH.text $ either id id $ formatDateTime "YYYY/MM/DD hh:mm:ss" dt
+    renderDateTime dt (Locale _ dur) =
+      HH.text $ either id id $ maybe (Left "") (formatDateTime "YYYY/MM/DD HH:mm:ss") dt_
+      where
+        dt_ = (DateTime.adjust (negate dur)) dt
 
 eval :: forall eff. Query ~> H.ComponentDSL State Query Message (Eff_ eff)
 eval = case _ of
+  SetLocale locale next -> do
+    H.modify _{ locale = locale }
+    pure next
+
   Scan next -> do
     busy <- H.gets _.busy
     when (not busy) do
