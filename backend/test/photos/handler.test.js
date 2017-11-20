@@ -12,13 +12,8 @@ const helper = require('test/test-helper');
 const fixture = require('test/fixture');
 const Localstack = require('lib/localstack');
 
-const awsStub = {
-  DynamoDB: Localstack.DynamoDB,
-  S3: Localstack.S3,
-  '@global': true
-}
 
-const s3 = new Localstack.S3();
+const s3 = new helper.awsStub.S3();
 
 describe('#photos-recognize', () => {
   let event;
@@ -51,7 +46,7 @@ describe('#photos-recognize', () => {
       ]))
     }
     const stub = {
-      'aws-sdk': awsStub,
+      'aws-sdk': helper.awsStub,
       'app/messenger': messenger,
       'app/predictor': predictor,
       'app/locale/ja': {
@@ -94,7 +89,6 @@ describe('#photos-recognize', () => {
     });
 
     it('stores image to bucket', () => {
-      const s3 = new Localstack.S3();
       const params = { Bucket: 'agrishot-test-photos' };
 
       return co(function *() {
@@ -116,7 +110,7 @@ describe('#photos-recognize', () => {
     });
 
     it('updates photo record', () => {
-      const Photo = proxyquire('app/models/photo', { 'aws-sdk': awsStub })
+      const Photo = proxyquire('app/models/photo', { 'aws-sdk': helper.awsStub })
       return co(function *() {
         const org = Photo.unmarshall(event.Records[0].dynamodb.NewImage);
         yield handle(event, {});
@@ -138,11 +132,7 @@ describe('#photos-thumbnail', () => {
   let handle;
 
   beforeEach(() => {
-    const stub = {
-      'aws-sdk': awsStub,
-      '@global': true
-    };
-    const handler = proxyquire('app/photos/handler', stub);
+    const handler = proxyquire('app/photos/handler', { 'aws-sdk': helper.awsStub });
     handle = promisify(handler.thumbnail.bind(handler));
   });
 

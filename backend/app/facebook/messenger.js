@@ -16,5 +16,12 @@ module.exports = {
         'access_token': process.env.FACEBOOK_PAGE_ACCESS_TOKEN
       }
     };
+  },
+
+  get: (url) => {
+    return {
+      method: 'GET',
+      uri: url
+    };
   }
 };

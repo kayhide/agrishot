@@ -15,5 +15,15 @@ module.exports = {
         }]
       }
     };
+  },
+
+  get: (url) => {
+    return {
+      method: 'GET',
+      uri: url,
+      headers: {
+        Authorization: `Bearer ${process.env.LINE_ACCESS_TOKEN}`
+      }
+    };
   }
 };

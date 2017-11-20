@@ -29,7 +29,7 @@ module.exports.recognize = (event, context, callback) => {
     const photo = Photo.unmarshall(data);
     if (!photo.src_url) { throw new Error("`Photo#src_url` is not present") }
 
-    const meta = yield Photo.store(photo);
+    const meta = yield Messenger.storeImage(photo.sender, photo.src_url, photo.id);
     photo.image_url = meta.Location;
     yield Photo.update(photo);
 

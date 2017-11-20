@@ -2,11 +2,7 @@
 
 const co = require('co');
 const _ = require('lodash');
-const url = require('url');
-const mime = require('mime-types');
 const uuid = require('uuid');
-const stream = require('stream');
-const request = require('request');
 const promisify = require('util.promisify');
 
 const Joi = require('joi');
@@ -102,23 +98,6 @@ const Photo = {
     return promisify(q.exec.bind(q))()
       .then(res => _.maxBy(res.Items, item => item.attrs.created_at))
       .then(item => item.attrs);
-  },
-
-  store: (obj) => {
-    const key = `${obj.id}.jpg`
-    const location = obj.src_url;
-    const pass = stream.PassThrough();
-    const params = {
-      Bucket: `${process.env.RESOURCE_PREFIX}photos`,
-      Key: key,
-      Body: pass,
-      ContentType: mime.lookup(url.parse(location).pathname),
-      ACL: 'public-read'
-    };
-    request.get(location).pipe(pass);
-    return promisify(s3.upload.bind(s3))(params).then((data) => {
-      return Promise.resolve(data);
-    });
   }
 };
 
