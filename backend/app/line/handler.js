@@ -17,7 +17,9 @@ module.exports.receive = (event, context, callback) => {
   const sender = {
     provider: 'line',
     id: e.source.userId,
-    replyToken: e.replyToken
+    line: {
+      reply_token: e.replyToken
+    }
   };
   const message = e.message;
 
@@ -31,16 +33,24 @@ module.exports.receive = (event, context, callback) => {
 };
 
 const respondOn = (message) => {
-  const p = responder[message.type];
-  return p || ((sender, message) => Promise.reject(`Unacceptable message type: ${message.type}`));
-}
+  return responder[message.type] ||
+    ((sender, message) => Promise.reject(`Unacceptable message type: ${message.type}`));
+};
 
 const responder = {
   text: (sender, message) => {
-    return Messenger.send(sender, t.received_text, { replyToken: sender.replyToken });
+    return Messenger.send(sender, t.received_text);
   },
 
   image: (sender, message) => {
-    return Messenger.send(sender, t.received_image, { replyToken: sender.replyToken });
+    return co(function *() {
+      const src = `https://api.line.me/v2/bot/message/${message.id}/content`;
+      const photo = Photo.build({
+        src_url: src,
+        sender: sender
+      });
+      yield Photo.create(photo);
+      yield Messenger.send(sender, t.received_image);
+    });
   }
 };

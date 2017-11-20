@@ -10,13 +10,6 @@ const nock = require('nock');
 
 const helper = require('test/test-helper');
 const fixture = require('test/fixture');
-const Localstack = require('lib/localstack');
-
-const awsStub = {
-  DynamoDB: Localstack.DynamoDB,
-  S3: Localstack.S3,
-  '@global': true
-}
 
 
 describe('#line-receive', () => {
@@ -25,7 +18,7 @@ describe('#line-receive', () => {
 
   beforeEach(() => {
     const stub = {
-      'aws-sdk': awsStub,
+      'aws-sdk': helper.awsStub,
       'app/locale/ja': {
         received_text: 'Received text!',
         received_image: 'Received image!',
@@ -87,6 +80,19 @@ describe('#line-receive', () => {
       return co(function *() {
         yield handle(event, {});
         scope.done();
+      });
+    });
+
+    it('creates a photo record', () => {
+      const Photo = proxyquire('app/models/photo', { 'aws-sdk': helper.awsStub })
+      return co(function *() {
+        const org = yield Photo.count();
+        yield handle(event, {});
+        const cur = yield Photo.count();
+        assert(cur - org === 1);
+
+        const photo = yield Photo.last();
+        assert(photo.sender_id === 'line:Uffffffffffffffffffffffffffffffff');
       });
     });
   });

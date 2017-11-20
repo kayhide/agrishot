@@ -12,20 +12,13 @@ const fixture = require('test/fixture');
 const Localstack = require('lib/localstack');
 
 
-
-const awsStub = {
-  DynamoDB: Localstack.DynamoDB,
-  S3: Localstack.S3,
-  '@global': true
-}
-
 describe('#facebook-challenge', () => {
   let event;
   let handle;
 
   beforeEach(() => {
     const stub = {
-      'aws-sdk': awsStub
+      'aws-sdk': helper.awsStub
     };
     const handler = proxyquire('app/facebook/handler', stub);
     event = {
@@ -71,7 +64,7 @@ describe('#facebook-receive', () => {
 
   beforeEach(() => {
     const stub = {
-      'aws-sdk': awsStub,
+      'aws-sdk': helper.awsStub,
       'app/locale/ja': {
         received_text: 'Received text!',
         received_image: 'Received image!',
@@ -135,7 +128,7 @@ describe('#facebook-receive', () => {
     });
 
     it('creates a photo record', () => {
-      const Photo = proxyquire('app/models/photo', { 'aws-sdk': awsStub })
+      const Photo = proxyquire('app/models/photo', { 'aws-sdk': helper.awsStub })
       return co(function *() {
         const org = yield Photo.count();
         yield handle(event, {});

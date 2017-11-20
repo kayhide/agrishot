@@ -10,6 +10,7 @@ const stream = require('stream');
 const nock = require('nock');
 
 const boot = require('lib/boot');
+const Localstack = require('lib/localstack');
 const fixture = require('test/fixture');
 
 let config;
@@ -57,4 +58,10 @@ module.exports.exists = (s3, bucket, key) => {
   };
   return promisify(s3.headObject.bind(s3))(params)
     .then(() => Promise.resolve(true), () => Promise.resolve(false));
+};
+
+module.exports.awsStub = {
+  DynamoDB: Localstack.DynamoDB,
+  S3: Localstack.S3,
+  '@global': true
 };

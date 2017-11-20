@@ -30,7 +30,10 @@ const model = dynogels.define('Photo', {
     updated_at: Joi.number().required(),
     sender: {
       provider: Joi.string(),
-      id: Joi.string()
+      id: Joi.string(),
+      line: {
+        reply_token: Joi.string()
+      }
     }
   },
 
