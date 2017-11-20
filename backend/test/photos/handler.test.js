@@ -29,7 +29,7 @@ describe('#photos-recognize', () => {
 
   beforeEach(() => {
     messenger = {
-      send: sinon.stub().returns(Promise.resolve())
+      sendText: sinon.stub().returns(Promise.resolve())
     }
     predictor = {
       predict: sinon.stub().returns(Promise.resolve([
@@ -74,13 +74,15 @@ describe('#photos-recognize', () => {
         .reply(200, (uri, requestBody) => fs.createReadStream(fixture.join('image.jpg')));
     });
 
-    it('calls messenger.send with a text', () => {
+    it('calls messenger.sendText with a text', () => {
       return handle(event, {}).then((res) => {
-        assert(messenger.send.calledTwice);
-        assert(messenger.send.getCall(0).args[0] === '6789012345678901');
-        assert(messenger.send.getCall(0).args[1] === 'Predictions:\nMikan Sabi Dani 98%\nChano Hokori Dani 31%');
-        assert(messenger.send.getCall(1).args[0] === '6789012345678901');
-        assert(messenger.send.getCall(1).args[1] === 'Will be in touch soon!');
+        assert(messenger.sendText.calledTwice);
+        assert(messenger.sendText.getCall(0).args[0].provider === 'facebook');
+        assert(messenger.sendText.getCall(0).args[0].id  === '6789012345678901');
+        assert(messenger.sendText.getCall(0).args[1] === 'Predictions:\nMikan Sabi Dani 98%\nChano Hokori Dani 31%');
+        assert(messenger.sendText.getCall(1).args[0].provider === 'facebook');
+        assert(messenger.sendText.getCall(1).args[0].id  === '6789012345678901');
+        assert(messenger.sendText.getCall(1).args[1] === 'Will be in touch soon!');
       });
     });
 

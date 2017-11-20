@@ -39,7 +39,7 @@ const respondOn = (message) => {
 
 const responder = {
   text: (sender, message) => {
-    return Messenger.send(sender, t.received_text);
+    return Messenger.sendText(sender, t.received_text);
   },
 
   image: (sender, message) => {
@@ -50,7 +50,7 @@ const responder = {
         sender: sender
       });
       yield Photo.create(photo);
-      yield Messenger.send(sender, t.received_image);
+      yield Messenger.sendText(sender, t.received_image);
     });
   }
 };

@@ -36,10 +36,10 @@ module.exports.receive = (event, context, callback) => {
         sender: sender
       });
       yield Photo.create(photo);
-      yield Messenger.send(sender, t.received_image);
+      yield Messenger.sendText(sender, t.received_image);
     }
     else {
-      yield Messenger.send(sender, t.received_text);
+      yield Messenger.sendText(sender, t.received_text);
     }
     callback(null, { statusCode: 200 });
   }).catch((err) => {
