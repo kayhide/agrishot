@@ -38,15 +38,17 @@ const boot = require('lib/boot');
 co(function *() {
   yield boot();
 
-  setModels();
+  load();
 }).catch(err => {
   console.log(err);
 });
 
 
-function setModels() {
+function load() {
+  repl.context['_'] = require('lodash');
   if (process.env.USE_REMOTE) {
     repl.context.Photo = require('app/models/photo');
+    repl.context.Messenger = require('app/messenger');
   }
   else {
     const Localstack = require('lib/localstack');
@@ -59,5 +61,6 @@ function setModels() {
       }
     }
     repl.context.Photo = proxyquire('app/models/photo', stub);
+    repl.context.Messenger = proxyquire('app/messenger', stub);
   }
 };
