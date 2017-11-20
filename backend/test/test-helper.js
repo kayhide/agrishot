@@ -16,6 +16,7 @@ let config;
 
 before((done) => {
   nock.enableNetConnect('localhost');
+  // nock.recorder.rec();
 
   co(function *() {
     config = yield boot();

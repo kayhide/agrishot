@@ -2,6 +2,8 @@ const request = require('request');
 const promisify = require('util.promisify');
 
 
+const post = promisify(request.post.bind(request));
+
 module.exports = {
   send(receiver, text, opts = {}) {
     return sendTo[receiver.provider](receiver, text, opts);
@@ -10,7 +12,7 @@ module.exports = {
 
 const sendTo = {
   facebook: (receiver, text, opts) => {
-    const options = {
+    const args = {
       uri: 'https://graph.facebook.com/v2.6/me/messages',
       headers: {
         'Content-Type': 'application/json'
@@ -26,9 +28,25 @@ const sendTo = {
       }
     };
 
-    return promisify(request.post.bind(request))(options);
+    return post(args);
   },
 
   line: (receiver, text, opts) => {
+    const args = {
+      uri: 'https://api.line.me/v2/bot/message/reply',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.LINE_ACCESS_TOKEN}`
+      },
+      json: {
+        replyToken: opts.replyToken,
+        messages: [{
+          type: 'text',
+          text: text
+        }]
+      }
+    };
+
+    return post(args);
   }
 }

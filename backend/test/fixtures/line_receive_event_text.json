@@ -1,0 +1,53 @@
+{
+  "resource": "/webhook/line",
+  "path": "/webhook/line",
+  "httpMethod": "POST",
+  "headers": {
+    "Accept": "*/*",
+    "CloudFront-Forwarded-Proto": "https",
+    "CloudFront-Is-Desktop-Viewer": "true",
+    "CloudFront-Is-Mobile-Viewer": "false",
+    "CloudFront-Is-SmartTV-Viewer": "false",
+    "CloudFront-Is-Tablet-Viewer": "false",
+    "CloudFront-Viewer-Country": "JP",
+    "Content-Type": "application/json;charset=UTF-8",
+    "Host": "agrishot.test",
+    "User-Agent": "LineBotWebhook/1.0",
+    "Via": "1.1 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.cloudfront.net (CloudFront)",
+    "X-Amz-Cf-Id": "-xxxxxxxxxxxxxxxxxxxxxxxxxx_xxx-xxxxxxxxxxxx-xxxxxxxxx==",
+    "X-Amzn-Trace-Id": "Root=1-xxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxx",
+    "X-Forwarded-For": "203.123.456.789, 52.12.34.56",
+    "X-Forwarded-Port": "443",
+    "X-Forwarded-Proto": "https",
+    "X-Line-Signature": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx="
+  },
+  "queryStringParameters": null,
+  "pathParameters": null,
+  "stageVariables": null,
+  "requestContext": {
+    "path": "/dev/webhook/line",
+    "accountId": "012346789012",
+    "resourceId": "abc123",
+    "stage": "dev",
+    "requestId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    "identity": {
+      "cognitoIdentityPoolId": null,
+      "accountId": null,
+      "cognitoIdentityId": null,
+      "caller": null,
+      "apiKey": "",
+      "sourceIp": "203.123.456.789",
+      "accessKey": null,
+      "cognitoAuthenticationType": null,
+      "cognitoAuthenticationProvider": null,
+      "userArn": null,
+      "userAgent": "LineBotWebhook/1.0",
+      "user": null
+    },
+    "resourcePath": "/webhook/line",
+    "httpMethod": "POST",
+    "apiId": "abcde12345"
+  },
+  "body": "{\"events\":[{\"type\":\"message\",\"replyToken\":\"replytokenxxxxxxxxxxxxxxxxxxxxxx\",\"source\":{\"userId\":\"Uffffffffffffffffffffffffffffffff\",\"type\":\"user\"},\"timestamp\":1510977816558,\"message\":{\"type\":\"text\",\"id\":\"7890123456789\",\"text\":\"Hello.\"}}]}",
+  "isBase64Encoded": false
+}
