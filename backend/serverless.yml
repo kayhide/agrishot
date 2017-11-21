@@ -116,8 +116,8 @@ resources:
             AttributeName: id
             AttributeType: S
           -
-            AttributeName: sender_id
-            AttributeType: S
+            AttributeName: part
+            AttributeType: N
           -
             AttributeName: created_at
             AttributeType: N
@@ -127,16 +127,16 @@ resources:
             KeyType: HASH
         GlobalSecondaryIndexes:
           -
-            IndexName: ${self:provider.environment.RESOURCE_PREFIX}photos-sender_id-created_at
+            IndexName: ${self:provider.environment.RESOURCE_PREFIX}photos-part-created_at
             KeySchema:
               -
-                AttributeName: sender_id
+                AttributeName: part
                 KeyType: HASH
               -
                 AttributeName: created_at
                 KeyType: RANGE
             Projection:
-              ProjectionType: KEYS_ONLY
+              ProjectionType: ALL
             ProvisionedThroughput:
               ReadCapacityUnits: 1
               WriteCapacityUnits: 1

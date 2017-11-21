@@ -14,9 +14,12 @@ const Converter = require('aws-sdk/lib/dynamodb/converter');
 const s3 = new AWS.S3();
 
 
-const model = dynogels.define('Photo', {
-  hashKey: 'id',
+const tableName = `${process.env.RESOURCE_PREFIX}photos`;
+const PART = 0;
 
+const model = dynogels.define('Photo', {
+  tableName: tableName,
+  hashKey: 'id',
   schema: {
     id: Joi.string().uuid().required(),
     sender_id: Joi.string().required(),
@@ -30,10 +33,16 @@ const model = dynogels.define('Photo', {
       line: {
         reply_token: Joi.string()
       }
-    }
+    },
+    part: Joi.number().required()
   },
 
-  tableName: `${process.env.RESOURCE_PREFIX}photos`
+  indexes: [{
+    name: `${tableName}-part-created_at`,
+    type: 'global',
+    hashKey: 'part',
+    rangeKey: 'created_at'
+  }]
 });
 
 
@@ -44,6 +53,11 @@ function injectSenderId(attrs) {
   else {
     attrs.sender_id = undefined;
   }
+}
+
+function queryByCreatedAt(f) {
+  const q = f(model.query(PART).usingIndex(`${tableName}-part-created_at`));
+  return promisify(q.exec.bind(q))().then(res => _.map(res.Items, 'attrs'));
 }
 
 const Photo = {
@@ -62,7 +76,8 @@ const Photo = {
     const attrs_ = Object.assign({
       id: uuid.v1(),
       created_at: now,
-      updated_at: now
+      updated_at: now,
+      part: PART
     }, attrs);
     injectSenderId(attrs_)
     return promisify(model.create)(attrs_).then(() => attrs_);
@@ -93,11 +108,20 @@ const Photo = {
       .then(res => res.Items.map(item => item.attrs));
   },
 
+  first: () => {
+    return queryByCreatedAt(q => q.ascending().limit(1)).then(res => res[0]);
+  },
+
   last: () => {
-    const q = model.scan();
-    return promisify(q.exec.bind(q))()
-      .then(res => _.maxBy(res.Items, item => item.attrs.created_at))
-      .then(item => item.attrs);
+    return queryByCreatedAt(q => q.descending().limit(1)).then(res => res[0]);
+  },
+
+  olderFirst: () => {
+    return queryByCreatedAt(q => q.ascending());
+  },
+
+  newerFirst: () => {
+    return queryByCreatedAt(q => q.descending());
   }
 };
 
