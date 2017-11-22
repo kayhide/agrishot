@@ -27,6 +27,7 @@ exports._query = function(params) {
   return function(onError, onSuccess) {
     client.query(params, function(err, data) {
       console.log(params);
+      console.log(data);
       err ? onError(err) : onSuccess(data)
     });
 
