@@ -23,6 +23,19 @@ exports._scan = function(params) {
   };
 };
 
+exports._query = function(params) {
+  return function(onError, onSuccess) {
+    client.query(params, function(err, data) {
+      console.log(params);
+      err ? onError(err) : onSuccess(data)
+    });
+
+    return function(cancelError, cancelerError, cancelerSuccess) {
+      cancelerSuccess();
+    };
+  };
+};
+
 exports._get = function(params) {
   return function(onError, onSuccess) {
     client.get(params, function(err, data) {
