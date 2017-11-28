@@ -12,3 +12,4 @@ Statement:
   - dynamodb:Scan
   Resource:
   - <%= table_arn %>
+  - <%= table_arn %>/index/*
