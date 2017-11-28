@@ -4,8 +4,10 @@ import Prelude
 
 import Control.Monad.Aff (Aff, Milliseconds(Milliseconds), delay, error)
 import Control.Monad.Eff.Exception (Error)
-import Data.Array as Array
+import Data.Map (Map)
+import Data.Map as Map
 import Data.Maybe (Maybe(Nothing, Just))
+import Data.Tuple as Tuple
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -31,7 +33,7 @@ type Item m =
   }
 
 type State m =
-  { items :: Array (Item m)
+  { items :: Map ItemId (Item m)
   , lastId :: ItemId
   }
 
@@ -48,7 +50,7 @@ data Message =
 ui :: forall eff. H.Component HH.HTML Query Input Message (Aff eff)
 ui =
   H.component
-    { initialState: const { items: [], lastId: 0 }
+    { initialState: const { items: Map.empty, lastId: 0 }
     , render
     , eval
     , receiver: const Nothing
@@ -61,7 +63,7 @@ render state =
   [
     HH.div
     [ HP.class_ $ H.ClassName "container" ]
-    $ renderItem <$> state.items
+    $ renderItem <$> Tuple.snd <$> Map.toAscUnfoldable state.items
   ]
 
   where
@@ -151,26 +153,18 @@ eval = case _ of
 
     addItem item = do
       items <- H.gets _.items
-      H.modify _{ items = items <> [item], lastId = item.id }
+      H.modify _{ items = Map.insert item.id item items, lastId = item.id }
 
     findItem id = do
       items <- H.gets _.items
-      pure $ Array.find ((==) id <<< _.id) items
+      pure $ Map.lookup id items
 
     updateItem id updater = do
       items <- H.gets _.items
-      let items_ = do
-            i <- Array.findIndex ((==) id <<< _.id) items
-            Array.modifyAt i updater items
-      case items_ of
-        Just items__ -> H.modify _{ items = items__ }
-        Nothing -> pure unit
+      let items_ = Map.update (Just <<< updater) id items
+      H.modify _{ items = items_ }
 
     deleteItem id = do
       items <- H.gets _.items
-      let items_ = do
-            i <- Array.findIndex ((==) id <<< _.id) items
-            Array.deleteAt i items
-      case items_ of
-        Just items__ -> H.modify _{ items = items__ }
-        Nothing -> pure unit
+      let items_ = Map.delete id items
+      H.modify _{ items = items_ }
