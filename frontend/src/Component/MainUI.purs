@@ -134,7 +134,6 @@ render state =
 
   where
     photosCount_ = maybe "(unknown)" show state.photosCount
-    tableName = "agrishot-" <> state.appConfig.stage <> "-photos"
     loginConfig =
       { awsRegion: state.appConfig.awsRegion
       , awsIdentityPoolId: state.appConfig.awsIdentityPoolId
@@ -149,7 +148,13 @@ render state =
 
     renderPhotoList false _ = HH.div_ []
     renderPhotoList true locale =
-      HH.slot' cpPhotoList unit PhotoListUI.ui { tableName, locale } $ HE.input HandlePhotoList
+      HH.slot' cpPhotoList unit PhotoListUI.ui uiInput $ HE.input HandlePhotoList
+      where
+        uiInput =
+          { tableName: "agrishot-" <> state.appConfig.stage <> "-photos"
+          , indexNamePartCreatedAt: "agrishot-" <> state.appConfig.stage <> "-photos-part-created_at"
+          , locale
+          }
 
     renderNotices = do
       x@{ id, notice } <- state.notices
@@ -184,8 +189,8 @@ eval = case _ of
     pure next
 
   HandlePhotoList (PhotoListUI.Failed s) next -> do
-    postInfo "Reauthenticating..."
-    void $ H.query' cpLogin LoginSlot $ H.action LoginUI.LoginFacebook
+    postAlert "Failed to access database."
+    postAlert "Try login again."
     pure next
 
   RequestScanPhotoList next -> do

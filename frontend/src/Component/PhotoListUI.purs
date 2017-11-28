@@ -2,7 +2,9 @@ module Component.PhotoListUI where
 
 import Prelude
 
-import Aws.Dynamo (DYNAMO, scan)
+import Aws.Dynamo (DYNAMO)
+import Aws.Dynamo as Dynamo
+import Aws.Dynamo.Query as DQ
 import Control.Monad.Aff (Aff, attempt)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (runExcept, throwError)
@@ -23,6 +25,9 @@ import Halogen.HTML.Properties as HP
 import Model.Photo (Photo(..), Sender(..))
 
 
+type TableName = String
+type IndexName = String
+
 data Query a
   = SetLocale Locale a
   | Scan a
@@ -30,6 +35,7 @@ data Query a
 
 type State =
   { tableName :: TableName
+  , indexNamePartCreatedAt :: IndexName
   , items :: Array Photo
   , alerts :: Array String
   , busy :: Boolean
@@ -38,6 +44,7 @@ type State =
 
 type Input =
   { tableName :: TableName
+  , indexNamePartCreatedAt :: IndexName
   , locale :: Locale
   }
 
@@ -45,7 +52,6 @@ data Message
   = Scanned (Array Photo)
   | Failed String
 
-type TableName = String
 
 type Eff_ eff = Aff (dynamo :: DYNAMO | eff)
 
@@ -59,8 +65,9 @@ ui =
     }
 
 initialState :: Input -> State
-initialState { tableName, locale } =
+initialState { tableName, indexNamePartCreatedAt, locale } =
     { tableName: tableName
+    , indexNamePartCreatedAt: indexNamePartCreatedAt
     , items: []
     , alerts: []
     , busy: false
@@ -148,9 +155,14 @@ eval = case _ of
     busy <- H.gets _.busy
     when (not busy) do
       H.modify _{ busy = true }
-      opts <- { "TableName": _ } <$> H.gets _.tableName
+      tableName <- H.gets _.tableName
+      indexName <- H.gets _.indexNamePartCreatedAt
       items <- H.liftAff $ attempt $ do
-        items <- _."Items" <$> scan opts
+        items <- _."Items" <$> Dynamo.query do
+          DQ.tableName tableName
+          DQ.indexName indexName
+          DQ.descending
+          DQ.keyCondition $ DQ.eq_ "#part" 0
         getItems items
 
       case items of

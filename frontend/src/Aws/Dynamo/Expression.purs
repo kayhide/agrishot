@@ -77,11 +77,16 @@ encodeExpr keyCondition filter = StrMap.fromFoldable $ evalState interpret_ 0
       filter_ <- interpret filter
       let names = Array.concatMap _.names [keyCondition_, filter_]
           values = Array.concatMap _.values [keyCondition_, filter_]
-      pure [ Tuple "ExpressionAttributeNames" $ encode $ StrMap.fromFoldable $ (append "#" &&& id) <$> names
-           , Tuple "ExpressionAttributeValues" $ encode $ StrMap.fromFoldable $ values
-           , Tuple "KeyConditionExpression" $ encode keyCondition_.expression
-           , Tuple "FilterExpression" $ encode filter_.expression
-           ]
+          keyConditionExpression = case keyCondition of
+            Blank -> []
+            otherwise -> [ Tuple "KeyConditionExpression" $ encode keyCondition_.expression ]
+          filterExpression = case filter of
+            Blank -> []
+            otherwise -> [ Tuple "FilterExpression" $ encode filter_.expression ]
+      pure $
+        [ Tuple "ExpressionAttributeNames" $ encode $ StrMap.fromFoldable $ (append "#" &&& id) <$> names
+        , Tuple "ExpressionAttributeValues" $ encode $ StrMap.fromFoldable $ values
+        ] <> keyConditionExpression <> filterExpression
 
 
 type InterExpr =
