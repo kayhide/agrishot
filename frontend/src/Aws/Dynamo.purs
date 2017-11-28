@@ -40,5 +40,5 @@ type QueryResult a =
 
 foreign import _query :: forall eff a. Foreign -> EffFnAff (dynamo :: DYNAMO | eff) (QueryResult a)
 
-query :: forall eff a. Query.Builder -> Aff (dynamo :: DYNAMO | eff) (QueryResult a)
+query :: forall eff a. Query.Builder Unit -> Aff (dynamo :: DYNAMO | eff) (QueryResult a)
 query = fromEffFnAff <<< _query <<< encode

@@ -9,9 +9,11 @@ import Data.Foreign (Foreign)
 import Data.Foreign.Class (class Encode, encode)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
+import Data.Maybe (Maybe(..))
 import Data.Profunctor.Strong ((&&&))
 import Data.StrMap (StrMap)
 import Data.StrMap as StrMap
+import Data.String as String
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 
@@ -25,7 +27,9 @@ instance operandNumber :: ToOperand Number where
 instance operandBoolean :: ToOperand Boolean where
   toOperand = B
 instance operandString :: ToOperand String where
-  toOperand = S
+  toOperand s = case String.charAt 0 s of
+    Just '#' -> Path $ String.split (String.Pattern ".#") $ String.drop 1 s
+    otherwise -> S s
 
 data Operand
   = I Int

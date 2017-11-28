@@ -5,7 +5,6 @@ import Prelude
 import Aws.Config as AwsConfig
 import Aws.Dynamo (DYNAMO, ScanResult)
 import Aws.Dynamo as Dynamo
-import Aws.Dynamo.Expression as DE
 import Aws.Dynamo.Query as DQ
 import Control.Monad.Aff (Aff, runAff_)
 import Control.Monad.Aff.Console (log, logShow)
@@ -57,20 +56,22 @@ testDynamoQuery = do
   traverse_ logShow photos
   pure unit
   where
-    q = DQ.build do
+    q = do
       DQ.tableName "agrishot-dev-photos"
       DQ.indexName "agrishot-dev-photos-part-created_at"
       DQ.ascending
       DQ.limit 5
       DQ.keyCondition $
-        DE.AND_
-        [ (DE.EQ_ (DE.Path ["part"]) (DE.I 0))
-        , (DE.BETWEEN_ (DE.Path ["created_at"]) (DE.N 1511354013941.0) (DE.N 1511358491331.0))
+        DQ.and_
+        [ DQ.eq_ "#part" 0
+        , DQ.between_ "#created_at" 1511354013941.0 1511358491331.0
         ]
       DQ.filter $
-        -- (DE.NE_ (DE.Path ["sender_id"]) (DE.Path ["image_url"]))
-        -- DE.IN_ (DE.Path ["sender_id"]) [(DE.S "line:U1278409"), (DE.S "hoge")]
-        DE.IN_ (DE.Path ["sender", "provider"]) [(DE.S "line"), (DE.S "hoge")]
+        DQ.and_
+        [ DQ.ne_ "#sender_id" "#image_url"
+        , DQ.in_ "#sender_id" ["line:U1278409", "hoge"]
+        , DQ.in_ "#sender.#provider" ["line", "hoge"]
+        ]
 
 testMeta :: Aff AppEffs Unit
 testMeta = do
