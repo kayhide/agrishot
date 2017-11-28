@@ -11,7 +11,6 @@ import Component.PhotoListUI as PhotoListUI
 import Control.Monad.Aff (Aff)
 import Control.Monad.Eff.Now (NOW)
 import Control.Monad.Eff.Now as Now
-import Control.Monad.State (class MonadState)
 import Data.Array as Array
 import Data.DateTime.Locale (Locale(..), LocaleName(..))
 import Data.Either.Nested (Either3)
@@ -44,8 +43,6 @@ type State =
   { appConfig :: AppConfig
   , photosCount :: Maybe Int
   , awsAuthenticated :: Boolean
-  , notices :: Array NoticeUI.IdNotice
-  , noticeLastId :: Int
   , locale :: Locale
   }
 
@@ -53,7 +50,7 @@ type Input = AppConfig
 
 type Message = Void
 
-data NoticeSlot = NoticeSlot Int
+data NoticeSlot = NoticeSlot
 derive instance eqNoticeSlot :: Eq NoticeSlot
 derive instance ordNoticeSlot :: Ord NoticeSlot
 
@@ -85,8 +82,6 @@ ui =
     { initialState: { appConfig: _
                     , photosCount: Nothing
                     , awsAuthenticated: false
-                    , notices: []
-                    , noticeLastId: 0
                     , locale: Locale (Just (LocaleName "GMT")) (Minutes 0.0)
                     }
     , render
@@ -108,13 +103,7 @@ render state =
       [ HH.text "Agrishot Admin" ]
     , HH.slot' cpLogin LoginSlot LoginUI.ui loginConfig $ HE.input HandleLogin
     ]
-  , HH.div
-    [ HP.classes [ H.ClassName "fixed-bottom" ] ]
-    [
-      HH.div
-      [ HP.class_ $ H.ClassName "container" ]
-      renderNotices
-    ]
+  , HH.slot' cpNotice NoticeSlot NoticeUI.ui unit $ HE.input HandleNotice
   , HH.main
     [ HP.class_ $ H.ClassName "container mt-2" ]
     [
@@ -156,10 +145,6 @@ render state =
           , locale
           }
 
-    renderNotices = do
-      x@{ id, notice } <- state.notices
-      pure $ HH.slot' cpNotice (NoticeSlot id) NoticeUI.ui x $ HE.input HandleNotice
-
 eval :: forall eff. Query ~> H.ParentDSL State Query ChildQuery ChildSlot Message (Eff_ eff)
 eval = case _ of
   Initialize next -> do
@@ -168,8 +153,6 @@ eval = case _ of
     pure next
 
   HandleNotice (NoticeUI.Closed i) next -> do
-    notices <- Array.filter ((i /= _) <<< _.id) <$> H.gets _.notices
-    H.modify _{ notices = notices }
     pure next
 
   HandleLogin (LoginUI.Authenticated awsConfig) next -> do
@@ -203,14 +186,8 @@ eval = case _ of
     pure next
 
 
-postNotice :: forall m. MonadState State m => NoticeUI.Notice -> m Unit
-postNotice notice = do
-  noticeLastId <- (_ + 1) <$> H.gets _.noticeLastId
-  notices <- (_ <> [{ id: noticeLastId, notice: notice }]) <$> H.gets _.notices
-  H.modify _{ notices = notices, noticeLastId = noticeLastId }
-
-postInfo :: forall m. MonadState State m => String -> m Unit
-postInfo s = postNotice $ NoticeUI.Info s
-
-postAlert :: forall m. MonadState State m => String -> m Unit
-postAlert s = postNotice $ NoticeUI.Alert s
+  where
+    postNotice notice =
+      void $ H.query' cpNotice NoticeSlot $ H.action $ NoticeUI.Post notice
+    postInfo s = postNotice $ NoticeUI.Info s
+    postAlert s = postNotice $ NoticeUI.Alert s
