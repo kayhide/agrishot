@@ -4,9 +4,14 @@ import Prelude
 
 import Control.Monad.Aff (Aff, Milliseconds(Milliseconds), delay, error)
 import Control.Monad.Eff.Exception (Error)
+import Data.Lens (Lens, assign, modifying, over, set, use, view)
+import Data.Lens.At (at)
+import Data.Lens.Index (ix)
+import Data.Lens.Record (prop)
 import Data.Map (Map)
 import Data.Map as Map
 import Data.Maybe (Maybe(Nothing, Just))
+import Data.Symbol (SProxy(..))
 import Data.Tuple as Tuple
 import Halogen as H
 import Halogen.HTML as HH
@@ -36,6 +41,12 @@ type State m =
   { items :: Map ItemId (Item m)
   , lastId :: ItemId
   }
+
+_items :: forall a b r. Lens { items :: a | r } { items :: b | r } a b
+_items = prop (SProxy :: SProxy "items")
+
+_lastId :: forall a b r. Lens { lastId :: a | r } { lastId :: b | r } a b
+_lastId = prop (SProxy :: SProxy "lastId")
 
 data Query a
   = Post Notice a
@@ -101,7 +112,7 @@ render state =
 eval :: forall eff. Query ~> H.ComponentDSL (State (Aff eff)) Query Message (Aff eff)
 eval = case _ of
   Post notice next -> do
-    item <- newItem notice <<< (_ + 1) =<< H.gets _.lastId
+    item <- newItem notice <<< (_ + 1) <$> H.gets _.lastId
     addItem item
     void $ HM.fork do
       H.liftAff $ delay (Milliseconds 100.0)
@@ -113,17 +124,17 @@ eval = case _ of
     item <- findItem id
     case item of
       Just item_ -> do
-        let pinned = not item_.pinned
-        updateItem id _{ pinned = pinned }
-        case pinned of
+        case item_.pinned of
           false -> do
-            eval $ WaitAndClose id (Milliseconds 1000.0) next
-          true -> do
+            updateItem id _{ pinned = true, animated = ["notice", "notice-in"] }
             H.liftAff $ item_.canceler (error "cancelled")
             pure next
 
-      Nothing ->
-        pure next
+          true -> do
+            updateItem id _{ pinned = false }
+            eval $ WaitAndClose id (Milliseconds 1000.0) next
+
+      Nothing -> pure next
 
 
   WaitAndClose id ms next -> do
@@ -138,33 +149,27 @@ eval = case _ of
           deleteItem id
         updateItem id _{ canceler = canceler }
         pure next
-      Nothing ->
-        pure next
+
+      Nothing -> pure next
 
   where
-    newItem notice id = do
-      canceler <- HM.fork $ pure unit
-      pure { notice: notice
-           , id: id
-           , animated: ["notice", "notice-out"]
-           , pinned: false
-           , canceler: canceler
-           }
+    newItem notice id =
+      { notice: notice
+      , id: id
+      , animated: ["notice", "notice-out"]
+      , pinned: false
+      , canceler: const $ pure unit
+      }
 
     addItem item = do
-      items <- H.gets _.items
-      H.modify _{ items = Map.insert item.id item items, lastId = item.id }
+      assign (_items <<< at item.id) (Just item)
+      assign _lastId item.id
 
-    findItem id = do
-      items <- H.gets _.items
-      pure $ Map.lookup id items
+    findItem id =
+      use (_items <<< at id)
 
-    updateItem id updater = do
-      items <- H.gets _.items
-      let items_ = Map.update (Just <<< updater) id items
-      H.modify _{ items = items_ }
+    updateItem id updater =
+      modifying (_items <<< ix id) updater
 
-    deleteItem id = do
-      items <- H.gets _.items
-      let items_ = Map.delete id items
-      H.modify _{ items = items_ }
+    deleteItem id =
+      assign (_items <<< at id) Nothing
