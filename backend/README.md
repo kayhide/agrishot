@@ -102,6 +102,6 @@ $ STAGE=prod yarn run deploy
 
 ## NODE_PATH
 
-We assume `NODE_PATH` includes the frontend root dir and avoid to call `require` with relative paths.
+We assume `NODE_PATH` includes the backend root dir and avoid to call `require` with relative paths.
 
 In tests, `proxyquire` goes like so.
