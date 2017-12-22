@@ -18,6 +18,7 @@ const Predictor = require('app/predictor');
 const locale = require('app/locale');
 const t = locale.translations('ja');
 
+const lineAtId = process.env.LINE_AT_ID;
 
 module.exports.recognize = (event, context, callback) => {
   // console.log(JSON.stringify(event));
@@ -38,7 +39,8 @@ module.exports.recognize = (event, context, callback) => {
 
     yield Messenger.replyTexts(photo.sender, [
       t.predictions(items),
-      t.will_be_in_touch_soon
+      t.might_be_wrong,
+      t.contact_here(lineAtId)
     ]);
     callback(null, { message: 'Recognize successfully called', event });
   }).catch((err) => {

@@ -68,7 +68,7 @@ describe('#facebook-receive', () => {
       'app/locale/ja': {
         received_text: 'Received text!',
         received_image: 'Received image!',
-        will_be_in_touch_soon: 'Will be in touch soon!',
+        might_be_wrong: 'Might be wrong...',
         '@global': true
       }
     };

@@ -53,7 +53,8 @@ describe('#photos-recognize', () => {
       'app/locale/ja': {
         received_text: 'Received text!',
         received_image: 'Received image!',
-        will_be_in_touch_soon: 'Will be in touch soon!',
+        might_be_wrong: 'Might be wrong...',
+        contact_here: (id) => "Contact here: line://home/public/main?id=" + id,
         predictions: (items) => ["Predictions:", ...items].join("\n"),
         '@global': true
       }
@@ -79,7 +80,8 @@ describe('#photos-recognize', () => {
           messenger.replyTexts.getCall(0).args[1],
           [
             'Predictions:\nMikan Sabi Dani 98%\nChano Hokori Dani 31%',
-            'Will be in touch soon!'
+            'Might be wrong...',
+            'Contact here: line://home/public/main?id=atid1234'
           ]
         ));
       });
