@@ -19,6 +19,7 @@ const locale = require('app/locale');
 const t = locale.translations('ja');
 
 const lineAtId = process.env.LINE_AT_ID;
+const shopUrl = process.env.SHOP_URL;
 
 module.exports.recognize = (event, context, callback) => {
   // console.log(JSON.stringify(event));
@@ -40,7 +41,8 @@ module.exports.recognize = (event, context, callback) => {
     yield Messenger.replyTexts(photo.sender, [
       t.predictions(items),
       t.might_be_wrong,
-      t.contact_here(lineAtId)
+      t.contact_here(lineAtId),
+      t.shop_site_here(shopUrl)
     ]);
     callback(null, { message: 'Recognize successfully called', event });
   }).catch((err) => {

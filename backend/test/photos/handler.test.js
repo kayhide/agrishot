@@ -55,6 +55,7 @@ describe('#photos-recognize', () => {
         received_image: 'Received image!',
         might_be_wrong: 'Might be wrong...',
         contact_here: (id) => "Contact here: line://home/public/main?id=" + id,
+        shop_site_here: (url) => "Shop site here: " + url,
         predictions: (items) => ["Predictions:", ...items].join("\n"),
         '@global': true
       }
@@ -81,7 +82,8 @@ describe('#photos-recognize', () => {
           [
             'Predictions:\nMikan Sabi Dani 98%\nChano Hokori Dani 31%',
             'Might be wrong...',
-            'Contact here: line://home/public/main?id=atid1234'
+            'Contact here: line://home/public/main?id=atid1234',
+            'Shop site here: http://shop.agrishot.test/',
           ]
         ));
       });

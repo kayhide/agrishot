@@ -37,6 +37,7 @@ provider:
         - "arn:aws:s3:::${self:provider.environment.RESOURCE_PREFIX}photos-thumbnail/*"
   environment:
     RESOURCE_PREFIX: ${self:service}-${self:provider.stage}-
+    SHOP_URL: ${env:SHOP_URL, self:custom.envs.SHOP_URL}
     FACEBOOK_PAGE_ACCESS_TOKEN: ${env:FACEBOOK_PAGE_ACCESS_TOKEN, self:custom.envs.FACEBOOK_PAGE_ACCESS_TOKEN}
     LINE_ACCESS_TOKEN: ${env:LINE_ACCESS_TOKEN, self:custom.envs.LINE_ACCESS_TOKEN}
     LINE_AT_ID: ${env:LINE_AT_ID, self:custom.envs.LINE_AT_ID}
