@@ -25,23 +25,33 @@ import Model.Photo (Photo)
 
 type AppEffs = (meta :: META, dynamo :: DYNAMO, console :: CONSOLE, exception :: EXCEPTION)
 
+setup :: Eff AppEffs Unit
+setup =
+  Dynamo.setup =<< AwsConfig.build conf
+  where
+    conf =
+      { region: "local"
+      , endpoint: "http://localhost:4569"
+      , accessKeyId: ""
+      , secretAccessKey: ""
+      }
+
 main :: Eff AppEffs Unit
 main = runAff_ errorShow do
+  liftEff setup
   testDynamo
   testDynamoQuery
   testMeta
 
 testDynamo :: Aff AppEffs Unit
 testDynamo = do
-  liftEff $ Dynamo.setup =<< AwsConfig.build conf
   res <- Dynamo.scan opts
   logShow res."Count"
   photos <- getItems (res :: ScanResult Foreign)."Items"
   traverse_ logShow photos
 
   where
-    conf = { region: "local", endpoint: "http://localhost:4569", accessKeyId: "", secretAccessKey: "" }
-    opts = { "TableName": "agrishot-dev-photos" }
+    opts = { "TableName": "agrishot-test-photos" }
 
 getItems :: forall eff_. Array Foreign -> Aff eff_ (Array Photo)
 getItems objs =
@@ -57,8 +67,8 @@ testDynamoQuery = do
   pure unit
   where
     q = do
-      DQ.tableName "agrishot-dev-photos"
-      DQ.indexName "agrishot-dev-photos-part-created_at"
+      DQ.tableName "agrishot-test-photos"
+      DQ.indexName "agrishot-test-photos-part-created_at"
       DQ.ascending
       DQ.limit 5
       DQ.keyCondition $

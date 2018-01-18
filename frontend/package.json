@@ -20,8 +20,9 @@
   "scripts": {
     "build": "pulp build && webpack",
     "repl": "pulp repl",
+    "test": "NODE_PATH=. pulp test",
+    "test-watch": "NODE_PATH=. pulp --watch test",
     "watch": "webpack --watch",
-    "live-server": "live-server dist/dev --host=localhost --port=3000 --wait 1000 --watch dist/dev/*",
     "browser-sync": "browser-sync start --server --ss dist/dev --files dist/dev --no-ui --no-notify",
     "dev": "concurrently \"yarn run watch\" \"yarn run browser-sync\"",
     "browse": "rake browse",
