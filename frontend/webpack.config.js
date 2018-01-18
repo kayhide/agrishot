@@ -5,6 +5,7 @@ const CleanupPlugin = require('webpack-cleanup-plugin');
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const HtmlPlugin = require('html-webpack-plugin');
 const HtmlExcludeAssetsPlugin = require('html-webpack-exclude-assets-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 const OmitPlugin = require('./lib/omit-webpack-plugin');
 const helper = require('./lib/helper');
@@ -12,22 +13,23 @@ const helper = require('./lib/helper');
 process.env.STAGE = process.env.STAGE || 'dev';
 helper.verifyStage(process.env.STAGE);
 
-const output_dir = path.resolve(__dirname, 'dist', process.env.STAGE)
+const output_dir = path.resolve(__dirname,
+                                'dist',
+                                `${process.env.STAGE}${process.env.DEPLOYING ? "-deploy" : ""}`)
 
-const nameWith = (env => {
-  if (env === 'prod') {
+const nameWith = (deploying => {
+  if (deploying) {
     return (pre, suf) => `${pre}.[hash]${suf}`;
   } else {
     return (pre, suf) => `${pre}${suf}`;
   };
-}) (process.env.STAGE);
+}) (process.env.DEPLOYING);
 
 const entries = {
   regular: {
-    admin: './src/entry.js'
+    index: './src/entry.js'
   },
   static: {
-    index: './static/index.html',
     privacy_policy: './static/privacy_policy.html'
   }
 }
@@ -86,24 +88,26 @@ module.exports = {
     new ExtractTextPlugin(nameWith('styles', '.css')),
 
     ...Object.keys(entries.regular).map(k => new HtmlPlugin({
-      filename: `${k}.html`,
+      filename: (k === 'index') ? 'index.html' : `${k}/index.html`,
       template: `./static/${k}.html`,
-      favicon: './static/favicon.ico',
       chunks: [k]
     })),
 
     ...Object.keys(entries.static).map(k => new HtmlPlugin({
       filename: `${k}.html`,
       template: `./static/${k}.html`,
-      favicon: './static/favicon.ico',
       chunks: [k],
       excludeAssets: [/.*\.js/]
     })),
 
+    new CopyPlugin([
+      './static/favicon.ico'
+    ]),
     new HtmlExcludeAssetsPlugin(),
-    new CleanupPlugin(),
     new OmitPlugin({
       chunks: _.keys(entries.static)
-    })
+    }),
+
+    ...(process.env.DEPLOYING ? [ new CleanupPlugin() ] : [])
   ]
 };
