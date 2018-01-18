@@ -20,6 +20,11 @@ import Halogen.HTML.Properties as HP
 import Halogen.Query.HalogenM as HM
 
 
+data Slot = Slot
+derive instance eqSlot :: Eq Slot
+derive instance ordSlot :: Ord Slot
+
+
 data Notice = Info String | Alert String
 
 noticeBody :: Notice -> String

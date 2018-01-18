@@ -1,4 +1,4 @@
-module Component.PhotoListUI where
+module Component.PhotoListPage where
 
 import Prelude
 
@@ -21,17 +21,23 @@ import Data.String as String
 import Data.Traversable (traverse)
 import Halogen as H
 import Halogen.HTML as HH
+import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Model.Photo (Photo(..), Sender(..))
+
+
+data Slot = Slot
+derive instance eqSlot :: Eq Slot
+derive instance ordSlot :: Ord Slot
 
 
 type TableName = String
 type IndexName = String
 
 data Query a
-  = SetLocale Locale a
-  | Scan a
-  | GetState (State -> a)
+  = Initialize a
+  | SetLocale Locale a
+  | Reload a
 
 type State =
   { tableName :: TableName
@@ -49,19 +55,20 @@ type Input =
   }
 
 data Message
-  = Scanned (Array Photo)
-  | Failed String
+  = Failed String
 
 
 type Eff_ eff = Aff (dynamo :: DYNAMO | eff)
 
 ui :: forall eff. H.Component HH.HTML Query Input Message (Eff_ eff)
 ui =
-  H.component
+  H.lifecycleComponent
     { initialState: initialState
     , render
     , eval
     , receiver: const Nothing
+    , initializer: Just $ H.action Initialize
+    , finalizer: Nothing
     }
 
 initialState :: Input -> State
@@ -77,18 +84,20 @@ initialState { tableName, indexNamePartCreatedAt, locale } =
 render :: State -> H.ComponentHTML Query
 render state =
   HH.div_
-  [ HH.div
+  [
+    HH.button
+    [ HP.class_ $ H.ClassName "btn btn-outline-primary mb-2"
+    , HP.title "Reload"
+    , HE.onClick (HE.input_ Reload)
+    ]
+    [ HH.text "Reload" ]
+  , HH.div
     [ HP.class_ $ H.ClassName "row" ]
     (renderItem <$> state.items)
-  , HH.div_ (renderAlert <$> state.alerts)
   , renderBusy state.busy
   ]
 
   where
-    renderAlert s =
-      HH.pre_
-      [ HH.text s ]
-
     renderBusy false = HH.p_ []
     renderBusy true =
       HH.p
@@ -147,11 +156,14 @@ render state =
 
 eval :: forall eff. Query ~> H.ComponentDSL State Query Message (Eff_ eff)
 eval = case _ of
+  Initialize next -> do
+    eval $ Reload next
+
   SetLocale locale next -> do
     H.modify _{ locale = locale }
     pure next
 
-  Scan next -> do
+  Reload next -> do
     busy <- H.gets _.busy
     when (not busy) do
       H.modify _{ busy = true }
@@ -172,13 +184,8 @@ eval = case _ of
 
         Right items_ -> do
           H.modify _{ items = items_, alerts = [], busy = false }
-          H.raise $ Scanned items_
 
     pure next
-
-  GetState reply -> do
-    state <- H.get
-    pure $ reply state
 
 
 getItems :: forall eff. Array Foreign -> Aff eff (Array Photo)

@@ -19,6 +19,11 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 
 
+data Slot = Slot
+derive instance eqSlot :: Eq Slot
+derive instance ordSlot :: Ord Slot
+
+
 type LoginConfig =
   { awsRegion :: String
   , awsIdentityPoolId :: String
