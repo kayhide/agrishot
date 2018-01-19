@@ -20,6 +20,7 @@
     "purescript-routing": "^6.1.2"
   },
   "devDependencies": {
-    "purescript-psci-support": "^3.0.0"
+    "purescript-psci-support": "^3.0.0",
+    "purescript-quickcheck": "^4.6.1"
   }
 }

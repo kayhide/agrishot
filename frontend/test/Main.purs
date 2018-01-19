@@ -12,6 +12,7 @@ import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, errorShow)
 import Control.Monad.Eff.Exception (EXCEPTION, error, try)
+import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Except (runExcept, throwError)
 import Data.Either (Either(..))
 import Data.Foreign (Foreign)
@@ -21,9 +22,15 @@ import Data.Traversable (traverse, traverse_)
 import Dom.Meta (META)
 import Dom.Meta as Meta
 import Model.Photo (Photo)
+import Test.Aws.Dynamo as AwsDynamo
 
 
-type AppEffs = (meta :: META, dynamo :: DYNAMO, console :: CONSOLE, exception :: EXCEPTION)
+type AppEffs = ( console :: CONSOLE
+               , random :: RANDOM
+               , exception :: EXCEPTION
+               , dynamo :: DYNAMO
+               , meta :: META
+               )
 
 setup :: Eff AppEffs Unit
 setup =
@@ -39,6 +46,7 @@ setup =
 main :: Eff AppEffs Unit
 main = runAff_ errorShow do
   liftEff setup
+  AwsDynamo.test
   testDynamo
   testDynamoQuery
   testMeta
