@@ -2,6 +2,7 @@ module Component.Layout where
 
 import Prelude
 
+import Api as Api
 import Aws.Cognito (COGNITO)
 import Aws.Dynamo (DYNAMO)
 import Aws.Dynamo as Dynamo
@@ -115,6 +116,7 @@ render state =
       , awsIdentityPoolId: state.appConfig.awsIdentityPoolId
       , facebookAppId: state.appConfig.facebookAppId
       }
+    client = Api.makeClient state.appConfig.stage
     locale = state.locale
 
     renderNavbar =
@@ -182,12 +184,8 @@ render state =
 
       R.PhotoListPage ->
         withAuthentication
-        $ HH.slot' cpPhotoList PhotoListPage.Slot PhotoListPage.ui
-          { tableName: "agrishot-" <> state.appConfig.stage <> "-photos"
-          , indexNamePartCreatedAt: "agrishot-" <> state.appConfig.stage <> "-photos-part-created_at"
-          , locale
-          }
-          $ HE.input HandlePhotoList
+        $ HH.slot' cpPhotoList PhotoListPage.Slot PhotoListPage.ui { client, locale }
+        $ HE.input HandlePhotoList
 
     withAuthentication html =
       if state.awsAuthenticated

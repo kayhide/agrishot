@@ -2,25 +2,19 @@ module Component.PhotoListPage where
 
 import Prelude
 
+import Api as Api
+import Api.Photos as Photos
 import Aws.Dynamo (DYNAMO)
-import Aws.Dynamo as Dynamo
-import Aws.Dynamo.Query as DQ
 import Component.HTML.DateTime as DateTime
 import Component.HTML.LoadingIndicator as LoadingIndicator
 import Component.Util as Util
 import Control.Monad.Aff (Aff, attempt)
-import Control.Monad.Eff.Exception (error)
-import Control.Monad.Except (runExcept, throwError)
 import Data.Array as Array
 import Data.DateTime.Locale (Locale)
 import Data.Either (Either(Left, Right))
-import Data.Foldable (intercalate)
-import Data.Foreign (Foreign)
-import Data.Foreign.Class (decode)
 import Data.Maybe (Maybe(Nothing, Just))
 import Data.String (Pattern(..), Replacement(..))
 import Data.String as String
-import Data.Traversable (traverse)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -33,25 +27,19 @@ derive instance eqSlot :: Eq Slot
 derive instance ordSlot :: Ord Slot
 
 
-type TableName = String
-type IndexName = String
-
 data Query a
   = Initialize a
-  | SetLocale Locale a
   | Reload a
 
 type State =
-  { tableName :: TableName
-  , indexNamePartCreatedAt :: IndexName
+  { client :: Api.Client
+  , locale :: Locale
   , items :: Array Photo
   , busy :: Boolean
-  , locale :: Locale
   }
 
 type Input =
-  { tableName :: TableName
-  , indexNamePartCreatedAt :: IndexName
+  { client :: Api.Client
   , locale :: Locale
   }
 
@@ -64,7 +52,7 @@ type Eff_ eff = Aff (dynamo :: DYNAMO | eff)
 ui :: forall eff. H.Component HH.HTML Query Input Message (Eff_ eff)
 ui =
   H.lifecycleComponent
-    { initialState: initialState
+    { initialState
     , render
     , eval
     , receiver: const Nothing
@@ -73,13 +61,12 @@ ui =
     }
 
 initialState :: Input -> State
-initialState { tableName, indexNamePartCreatedAt, locale } =
-    { tableName: tableName
-    , indexNamePartCreatedAt: indexNamePartCreatedAt
-    , items: []
-    , busy: false
-    , locale: locale
-    }
+initialState { client, locale } =
+  { client
+  , locale
+  , items: []
+  , busy: false
+  }
 
 render :: State -> H.ComponentHTML Query
 render state =
@@ -153,20 +140,10 @@ eval = case _ of
   Initialize next -> do
     eval $ Reload next
 
-  SetLocale locale next -> do
-    H.modify _{ locale = locale }
-    pure next
-
   Reload next -> do
     Util.whenNotBusy_ do
-      { tableName, indexNamePartCreatedAt } <- H.get
-      items <- H.liftAff $ attempt $
-        getItems =<< _."Items" <$> Dynamo.query do
-          DQ.tableName tableName
-          DQ.indexName indexNamePartCreatedAt
-          DQ.descending
-          DQ.keyCondition $ DQ.eq_ "#part" 0
-
+      { client } <- H.get
+      items <- H.liftAff $ attempt $ Photos.index client
       case items of
         Left err -> do
           H.raise $ Failed "DynamoDB scan failed"
@@ -175,11 +152,3 @@ eval = case _ of
           H.modify _{ items = items_ }
 
     pure next
-
-
-getItems :: forall eff. Array Foreign -> Aff eff (Array Photo)
-getItems objs =
-  case runExcept (traverse decode objs) of
-    Right xs -> pure xs
-    Left err -> do
-      throwError $ (error <<< intercalate "\n\n" <<< map show) err
