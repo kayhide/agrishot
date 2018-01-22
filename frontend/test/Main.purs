@@ -6,17 +6,22 @@ import Aws.Config as AwsConfig
 import Aws.Dynamo (DYNAMO)
 import Aws.Dynamo as Dynamo
 import Control.Monad.Aff (Aff, runAff_)
-import Control.Monad.Aff.Console (log, logShow)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Console (CONSOLE, errorShow)
 import Control.Monad.Eff.Exception (EXCEPTION, try)
 import Control.Monad.Eff.Random (RANDOM)
-import Data.Either (Either(..))
+import Data.Array as Array
+import Data.Either (fromLeft)
+import Data.Maybe (fromJust)
+import Data.String (Pattern(..))
+import Data.String as String
 import Dom.Meta (META)
 import Dom.Meta as Meta
+import Partial.Unsafe (unsafePartial)
 import Test.Aws.Dynamo as AwsDynamo
 import Test.Aws.Dynamo.Query as AwsDynamoQuery
+import Test.QuickCheck (quickCheck', (===))
 
 
 type AppEffs = ( console :: CONSOLE
@@ -46,10 +51,8 @@ main = runAff_ errorShow do
 
 
 testMeta :: Aff AppEffs Unit
-testMeta = do
-  x <- liftEff $ try $ Meta.get "xxx"
-  case x of
-    Right x_ -> logShow x_
-    Left err -> do
-      log "xxxxxxxxxxxxxxxxxxxxxxxxxxx"
-      logShow err
+testMeta = liftEff do
+  x <- try $ Meta.get "xxx"
+  let err = unsafePartial $ fromLeft $ x
+      first = unsafePartial $ fromJust $ Array.head $ String.split (Pattern "\n") $ show err
+  quickCheck' 1 (first === "Error: Meta not found: xxx")
