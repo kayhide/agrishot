@@ -11,20 +11,17 @@ import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Except (runExcept)
 import Data.Array as Array
-import Data.Char.Gen (genAlpha)
-import Data.DateTime.Gen (genDateTime)
 import Data.Either (fromRight)
 import Data.Foreign.Class (decode, encode)
-import Data.Maybe (Maybe(..), fromJust)
+import Data.Maybe (fromJust)
 import Data.Newtype (unwrap)
 import Data.StrMap as StrMap
-import Data.String.Gen (genDigitString, genString)
 import Data.Traversable (traverse, traverse_)
 import Model.Photo (Photo(..))
-import Model.Photo as Photo
 import Partial.Unsafe (unsafePartial)
-import Test.QuickCheck (class Arbitrary, arbitrary, quickCheck', (===))
-import Test.QuickCheck.Gen (Gen, randomSample)
+import Test.Model (genPhoto)
+import Test.QuickCheck (quickCheck', (===))
+import Test.QuickCheck.Gen (randomSample)
 
 type Aff_ eff a = Aff
                   ( console :: CONSOLE
@@ -94,24 +91,3 @@ clean :: forall eff. Aff_ eff Unit
 clean = do
   ids <- map (_.id <<< unwrap) <$> scan_
   traverse_ delete_ ids
-
-genPhoto :: Gen Photo
-genPhoto = arbitrary >>= case _ of TestPhoto x -> pure x
-
-newtype TestPhoto = TestPhoto Photo
-
-instance arbitraryTestPhoto :: Arbitrary TestPhoto where
-  arbitrary = do
-    id <- genDigitString
-    sender_id <- genAlphaString
-    sender <- Just <$> do
-      r <- { id: _, provider: _ } <$> genAlphaString <*> genAlphaString
-      pure $ Photo.Sender r
-    image_url <- do
-      domain <- genAlphaString
-      basename <- genAlphaString
-      pure $ "http://" <> domain <> ".test/" <> basename <> ".jpg"
-    created_at <- genDateTime
-    pure $ TestPhoto $ Photo { id, sender_id, sender, image_url, created_at }
-    where
-      genAlphaString = genString genAlpha

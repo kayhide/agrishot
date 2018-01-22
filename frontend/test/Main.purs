@@ -19,6 +19,7 @@ import Data.String as String
 import Dom.Meta (META)
 import Dom.Meta as Meta
 import Partial.Unsafe (unsafePartial)
+import Test.Api.Photos as ApiPhotos
 import Test.Aws.Dynamo as AwsDynamo
 import Test.Aws.Dynamo.Query as AwsDynamoQuery
 import Test.QuickCheck (quickCheck', (===))
@@ -47,6 +48,7 @@ main = runAff_ errorShow do
   liftEff setup
   AwsDynamo.test
   AwsDynamoQuery.test
+  ApiPhotos.test
   testMeta
 
 

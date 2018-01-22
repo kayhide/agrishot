@@ -76,3 +76,20 @@ exports._delete = function(params) {
     };
   };
 };
+
+exports._count = function(tableName) {
+  return function(onError, onSuccess) {
+    var params = {
+      "TableName": tableName,
+      "Select": 'COUNT'
+    };
+    client.scan(params, function(err, data) {
+      console.log(params);
+      err ? onError(err) : onSuccess(data.Count)
+    });
+
+    return function(cancelError, cancelerError, cancelerSuccess) {
+      cancelerSuccess();
+    };
+  };
+};

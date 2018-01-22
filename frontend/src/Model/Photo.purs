@@ -29,6 +29,7 @@ newtype Photo =
   , sender :: Maybe Sender
   , image_url :: String
   , created_at :: DateTime
+  , part :: Int
   }
 
 newtype Sender =
@@ -50,6 +51,7 @@ instance encodePhoto :: Encode Photo where
     , Tuple "sender" $ encode $ NullOrUndefined photo.sender
     , Tuple "image_url" $ encode photo.image_url
     , Tuple "created_at" $ encode $ unwrap $ unInstant $ fromDateTime photo.created_at
+    , Tuple "part" $ encode photo.part
     ]
 
 instance decodePhoto :: Decode Photo where
@@ -59,7 +61,8 @@ instance decodePhoto :: Decode Photo where
     sender <- traverse decode =<< readNullOrUndefined =<< v ! "sender"
     image_url <- decode =<< v ! "image_url"
     created_at <- readDateTime =<< v ! "created_at"
-    pure $ Photo { id, sender_id, sender: sender, image_url, created_at }
+    part <- decode =<< v ! "part"
+    pure $ Photo { id, sender_id, sender, image_url, created_at, part }
 
 derive instance newtypeSender :: Newtype Sender _
 derive instance genericSender :: Generic Sender _

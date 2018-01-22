@@ -160,7 +160,7 @@ eval = case _ of
   Reload next -> do
     Util.whenNotBusy_ do
       { client } <- H.get
-      res <- H.liftAff $ attempt $ Photos.listFirst client
+      res <- H.liftAff $ attempt $ Photos.listFirst' client
       case res of
         Left err -> do
           H.raise $ Failed "DynamoDB scan failed"
@@ -175,7 +175,7 @@ eval = case _ of
       case last of
         Nothing -> pure unit
         Just last_ -> do
-          res <- H.liftAff $ attempt $ Photos.listNext client last_
+          res <- H.liftAff $ attempt $ Photos.listNext' client last_
           case res of
             Left err -> do
               H.raise $ Failed "DynamoDB scan failed"

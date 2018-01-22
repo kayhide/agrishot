@@ -81,3 +81,9 @@ foreign import _delete :: forall eff. DeleteParams -> EffFnAff (dynamo :: DYNAMO
 
 delete :: forall eff. DeleteParams -> Aff (dynamo :: DYNAMO | eff) Unit
 delete = fromEffFnAff <<< _delete
+
+
+foreign import _count :: forall eff. String -> EffFnAff (dynamo :: DYNAMO | eff) Int
+
+count :: forall eff. String -> Aff (dynamo :: DYNAMO | eff) Int
+count = fromEffFnAff <<< _count
