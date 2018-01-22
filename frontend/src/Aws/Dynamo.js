@@ -41,6 +41,7 @@ exports._get = function(params) {
   return function(onError, onSuccess) {
     client.get(params, function(err, data) {
       console.log(params);
+      console.log(data);
       err ? onError(err) : onSuccess(data)
     });
 

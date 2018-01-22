@@ -37,12 +37,28 @@ type QueryResult a =
   { "Items" :: Array a
   , "Count" :: Int
   , "ScannedCount" :: Int
+  , "LastEvaluatedKey" :: Maybe Foreign
   }
 
 foreign import _query :: forall eff a. Foreign -> EffFnAff (dynamo :: DYNAMO | eff) (QueryResult a)
 
 query :: forall eff a. Query.Builder Unit -> Aff (dynamo :: DYNAMO | eff) (QueryResult a)
 query = fromEffFnAff <<< _query <<< encode
+
+
+type GetParams =
+  { "TableName" :: String
+  , "Key" :: Foreign
+  }
+
+type GetResult a =
+  { "Item" :: a
+  }
+
+foreign import _get :: forall eff a. GetParams -> EffFnAff (dynamo :: DYNAMO | eff) (GetResult a)
+
+get :: forall eff forall a. GetParams -> Aff (dynamo :: DYNAMO | eff) (GetResult a)
+get = fromEffFnAff <<< _get
 
 
 type PutParams =
