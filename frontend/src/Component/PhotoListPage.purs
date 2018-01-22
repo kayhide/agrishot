@@ -30,11 +30,13 @@ derive instance ordSlot :: Ord Slot
 data Query a
   = Initialize a
   | Reload a
+  | LoadNext a
 
 type State =
   { client :: Api.Client
   , locale :: Locale
   , items :: Array Photo
+  , last :: Maybe Photos.TableKey
   , busy :: Boolean
   }
 
@@ -65,12 +67,13 @@ initialState { client, locale } =
   { client
   , locale
   , items: []
+  , last: Nothing
   , busy: false
   }
 
 render :: State -> H.ComponentHTML Query
 render state =
-  HH.div_
+  HH.div_ $
   [
     LoadingIndicator.render state.busy
   , HH.button
@@ -88,8 +91,22 @@ render state =
     [ HP.class_ $ H.ClassName "row no-gutters" ]
     (renderItem <$> state.items)
   ]
+  <> (Array.fromFoldable $ renderLoadNextButton <$> state.last)
 
   where
+    renderLoadNextButton _ =
+      HH.button
+      [ HP.class_ $ H.ClassName "btn btn-sm btn-secondary mb-2"
+      , HP.title "LoadNext"
+      , HE.onClick (HE.input_ LoadNext)
+      ]
+      [
+        HH.i
+        [ HP.class_ $ H.ClassName "fa fa-chevron-down"
+        , HP.title "LoadNext"
+        ] []
+      ]
+
     renderItem (Photo { id, sender_id, image_url, created_at, sender }) =
       HH.div
       [ HP.class_ $ H.ClassName "col-md-2 col-sm-4 col-6 pb-2" ]
@@ -143,12 +160,27 @@ eval = case _ of
   Reload next -> do
     Util.whenNotBusy_ do
       { client } <- H.get
-      items <- H.liftAff $ attempt $ Photos.index client
-      case items of
+      res <- H.liftAff $ attempt $ Photos.listFirst client
+      case res of
         Left err -> do
           H.raise $ Failed "DynamoDB scan failed"
+        Right { items, lastKey } -> do
+          H.modify _{ items = items, last = lastKey }
 
-        Right items_ -> do
-          H.modify _{ items = items_ }
+    pure next
+
+  LoadNext next -> do
+    Util.whenNotBusy_ do
+      { client, last } <- H.get
+      case last of
+        Nothing -> pure unit
+        Just last_ -> do
+          res <- H.liftAff $ attempt $ Photos.listNext client last_
+          case res of
+            Left err -> do
+              H.raise $ Failed "DynamoDB scan failed"
+            Right { items, lastKey } -> do
+              items_ <- H.gets _.items
+              H.modify _{ items = items_ <> items, last = lastKey }
 
     pure next
