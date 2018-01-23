@@ -4,6 +4,7 @@ import Prelude
 
 import Aws.Dynamo (DYNAMO)
 import Aws.Dynamo as Dynamo
+import Aws.Dynamo.Query as DQ
 import Control.Monad.Aff (Aff)
 import Control.Monad.Aff.Console (CONSOLE)
 import Control.Monad.Eff.Class (liftEff)
@@ -12,7 +13,9 @@ import Control.Monad.Eff.Random (RANDOM)
 import Control.Monad.Except (runExcept)
 import Data.Array as Array
 import Data.Either (fromRight)
+import Data.Foreign (readArray)
 import Data.Foreign.Class (decode, encode)
+import Data.Foreign.Index ((!))
 import Data.Maybe (fromJust)
 import Data.Newtype (unwrap)
 import Data.StrMap as StrMap
@@ -57,8 +60,10 @@ tableName = "agrishot-test-photos"
 
 scan_ :: forall eff. Aff_ eff (Array Photo)
 scan_ = do
-  res <- Dynamo.scan { "TableName": tableName }
-  pure $ unsafePartial $ fromRight $ runExcept $ traverse decode $ res."Items"
+  res <- Dynamo.scan do
+    DQ.tableName tableName
+  pure $ unsafePartial $ fromRight $ runExcept $ do
+    traverse decode =<< readArray =<< res ! "Items"
 
 
 put_ :: forall eff. Photo -> Aff_ eff Unit
@@ -84,7 +89,10 @@ delete_ id =
   }
 
 count_ :: forall eff. Aff_ eff Int
-count_ = _."Count" <$> Dynamo.scan { "TableName": tableName }
+count_ = do
+  res <- Dynamo.scan do
+    DQ.tableName tableName
+  pure $ unsafePartial $ fromRight $ runExcept $ decode =<< res ! "Count"
 
 
 clean :: forall eff. Aff_ eff Unit

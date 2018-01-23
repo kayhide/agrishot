@@ -9,7 +9,6 @@ import Control.Monad.Aff.Compat (EffFnAff, fromEffFnAff)
 import Control.Monad.Eff (kind Effect, Eff)
 import Data.Foreign (Foreign)
 import Data.Foreign.Class (encode)
-import Data.Maybe (Maybe)
 
 
 foreign import data DYNAMO :: Effect
@@ -17,28 +16,11 @@ foreign import data DYNAMO :: Effect
 foreign import setup :: forall eff. AwsConfig -> Eff (dynamo :: DYNAMO | eff) Unit
 
 
-type ScanOptions =
-  { "TableName" :: String
-  }
+foreign import _scan :: forall eff a. Foreign -> EffFnAff (dynamo :: DYNAMO | eff) Foreign
 
-type ScanResult a =
-  { "Items" :: Array a
-  , "Count" :: Int
-  , "ScannedCount" :: Int
-  }
+scan :: forall eff a. Query.Builder Unit -> Aff (dynamo :: DYNAMO | eff) Foreign
+scan = fromEffFnAff <<< _scan <<< encode
 
-foreign import _scan :: forall eff a. ScanOptions -> EffFnAff (dynamo :: DYNAMO | eff) (ScanResult a)
-
-scan :: forall eff a. ScanOptions -> Aff (dynamo :: DYNAMO | eff) (ScanResult a)
-scan = fromEffFnAff <<< _scan
-
-
-type QueryResult a =
-  { "Items" :: Array a
-  , "Count" :: Int
-  , "ScannedCount" :: Int
-  , "LastEvaluatedKey" :: Maybe Foreign
-  }
 
 foreign import _query :: forall eff a. Foreign -> EffFnAff (dynamo :: DYNAMO | eff) Foreign
 

@@ -83,10 +83,21 @@ encodeExpr keyCondition filter = StrMap.fromFoldable $ evalState interpret_ 0
           filterExpression = case filter of
             Blank -> []
             otherwise -> [ Tuple "FilterExpression" $ encode filter_.expression ]
+          expressionAttributeNames = case names of
+            [] -> []
+            otherwise ->
+              [ Tuple "ExpressionAttributeNames" $
+                encode $ StrMap.fromFoldable $ (append "#" &&& id) <$> names
+              ]
+          expressionAttributeValues = case values of
+            [] -> []
+            otherwise ->
+              [ Tuple "ExpressionAttributeValues" $
+                encode $ StrMap.fromFoldable $ values
+              ]
       pure $
-        [ Tuple "ExpressionAttributeNames" $ encode $ StrMap.fromFoldable $ (append "#" &&& id) <$> names
-        , Tuple "ExpressionAttributeValues" $ encode $ StrMap.fromFoldable $ values
-        ] <> keyConditionExpression <> filterExpression
+        expressionAttributeNames <> expressionAttributeValues
+        <> keyConditionExpression <> filterExpression
 
 
 type InterExpr =
