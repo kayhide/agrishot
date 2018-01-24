@@ -19,6 +19,7 @@ import Data.String as String
 import Dom.Meta (META)
 import Dom.Meta as Meta
 import Partial.Unsafe (unsafePartial)
+import Test.Api.Pests as ApiPests
 import Test.Api.Photos as ApiPhotos
 import Test.Aws.Dynamo as AwsDynamo
 import Test.Aws.Dynamo.Query as AwsDynamoQuery
@@ -33,7 +34,7 @@ type AppEffs = ( console :: CONSOLE
                )
 
 setup :: Eff AppEffs Unit
-setup =
+setup = do
   Dynamo.setup =<< AwsConfig.build conf
   where
     conf =
@@ -49,6 +50,7 @@ main = runAff_ errorShow do
   AwsDynamo.test
   AwsDynamoQuery.test
   ApiPhotos.test
+  ApiPests.test
   testMeta
 
 

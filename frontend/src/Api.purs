@@ -9,6 +9,9 @@ newtype Client =
     { tableName :: String
     , indexNamePartCreatedAt :: String
     }
+  , pests ::
+    { tableName :: String
+    }
   }
 
 makeClient :: String -> Client
@@ -17,5 +20,8 @@ makeClient stage =
   { photos:
     { tableName: "agrishot-" <> stage <> "-photos"
     , indexNamePartCreatedAt: "agrishot-" <> stage <> "-photos-part-created_at"
+    }
+  , pests:
+    { tableName: "agrishot-" <> stage <> "-pests"
     }
   }
