@@ -8,6 +8,7 @@ import Aws.Dynamo (DYNAMO)
 import Aws.Dynamo as Dynamo
 import Component.LoginUI as LoginUI
 import Component.NoticeUI as NoticeUI
+import Component.PestListPage as PestListPage
 import Component.PhotoListPage as PhotoListPage
 import Component.Route as R
 import Control.Monad.Aff (Aff)
@@ -40,6 +41,7 @@ data Query a
   | HandleNotice NoticeUI.Message a
   | HandleLogin LoginUI.Message a
   | HandlePhotoList PhotoListPage.Message a
+  | HandlePestList PestListPage.Message a
   | Goto R.Location a
 
 type State =
@@ -57,12 +59,14 @@ type ChildQuery
   = NoticeUI.Query
     <\/> LoginUI.Query
     <\/> PhotoListPage.Query
+    <\/> PestListPage.Query
     <\/> Const Void
 
 type ChildSlot
   = NoticeUI.Slot
     \/ LoginUI.Slot
     \/ PhotoListPage.Slot
+    \/ PestListPage.Slot
     \/ Void
 
 cpNotice :: CP.ChildPath NoticeUI.Query ChildQuery NoticeUI.Slot ChildSlot
@@ -73,6 +77,9 @@ cpLogin = CP.cp2
 
 cpPhotoList :: CP.ChildPath PhotoListPage.Query ChildQuery PhotoListPage.Slot ChildSlot
 cpPhotoList = CP.cp3
+
+cpPestList :: CP.ChildPath PestListPage.Query ChildQuery PestListPage.Slot ChildSlot
+cpPestList = CP.cp4
 
 
 type Eff_ eff = Aff (cognito :: COGNITO, dynamo :: DYNAMO, dom :: DOM, now :: NOW | eff)
@@ -137,6 +144,7 @@ render state =
         [ HP.class_ $ H.ClassName "navbar-nav mr-auto" ]
         [
           renderMenuItem R.PhotoListPage "Photos" "picture-o"
+        , renderMenuItem R.PestListPage "Pests" "bug"
         ]
       , HH.slot' cpLogin LoginUI.Slot LoginUI.ui loginConfig $ HE.input HandleLogin
       ]
@@ -179,6 +187,14 @@ render state =
               HH.i [ HP.class_ $ H.ClassName "fa fa-fw fa-picture-o mr-2" ] []
             , HH.text "Photos"
             ]
+          , HH.a
+            [ HP.class_ $ H.ClassName "nav-link"
+            , HP.href $ R.path $ R.PestListPage
+            ]
+            [
+              HH.i [ HP.class_ $ H.ClassName "fa fa-fw fa-bug mr-2" ] []
+            , HH.text "Pests"
+            ]
           ]
         ]
 
@@ -186,6 +202,11 @@ render state =
         withAuthentication
         $ HH.slot' cpPhotoList PhotoListPage.Slot PhotoListPage.ui { client, locale }
         $ HE.input HandlePhotoList
+
+      R.PestListPage ->
+        withAuthentication
+        $ HH.slot' cpPestList PestListPage.Slot PestListPage.ui { client, locale }
+        $ HE.input HandlePestList
 
     withAuthentication html =
       if state.awsAuthenticated
@@ -221,6 +242,10 @@ eval = case _ of
     pure next
 
   HandlePhotoList (PhotoListPage.Failed s) next -> do
+    postAlert s
+    pure next
+
+  HandlePestList (PestListPage.Failed s) next -> do
     postAlert s
     pure next
 

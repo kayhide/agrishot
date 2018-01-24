@@ -9,12 +9,14 @@ import Routing.Match.Class (lit)
 data Location
   = Home
   | PhotoListPage
+  | PestListPage
 
 routing :: Match Location
-routing = photoListPage <|> home
+routing = photos <|> pests <|> home
   where
     home = Home <$ lit ""
-    photoListPage = PhotoListPage <$ route "photos"
+    photos = PhotoListPage <$ route "photos"
+    pests = PestListPage <$ route "pests"
 
     route str = lit "" *> lit str
 
@@ -23,3 +25,4 @@ path :: Location -> String
 path = case _ of
   Home -> "#/"
   PhotoListPage -> "#/photos"
+  PestListPage -> "#/pests"
