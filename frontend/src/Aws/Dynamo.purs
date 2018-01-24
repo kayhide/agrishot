@@ -14,6 +14,7 @@ import Data.Foreign.Class (encode)
 foreign import data DYNAMO :: Effect
 
 foreign import setup :: forall eff. AwsConfig -> Eff (dynamo :: DYNAMO | eff) Unit
+foreign import verbose :: forall eff. Boolean -> Eff (dynamo :: DYNAMO | eff) Unit
 
 
 foreign import _scan :: forall eff a. Foreign -> EffFnAff (dynamo :: DYNAMO | eff) Foreign

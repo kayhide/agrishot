@@ -209,7 +209,9 @@ eval = case _ of
 
   HandleLogin (LoginUI.Authenticated awsConfig) next -> do
     postInfo "Authenticated."
-    H.liftEff $ Dynamo.setup awsConfig
+    H.liftEff $ do
+      Dynamo.verbose true
+      Dynamo.setup awsConfig
     H.modify _{ awsAuthenticated = true }
     pure next
 

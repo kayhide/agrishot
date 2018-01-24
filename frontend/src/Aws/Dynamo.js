@@ -10,10 +10,21 @@ exports.setup = function(conf) {
   };
 };
 
+var verbose = false;
+
+exports.verbose = function(b) {
+  return function () {
+    verbose = b;
+  };
+};
+
 exports._scan = function(params) {
   return function(onError, onSuccess) {
     client.scan(params, function(err, data) {
-      console.log(params);
+      if (verbose) {
+        console.log(params);
+        console.log(data);
+      }
       err ? onError(err) : onSuccess(data)
     });
 
@@ -26,8 +37,10 @@ exports._scan = function(params) {
 exports._query = function(params) {
   return function(onError, onSuccess) {
     client.query(params, function(err, data) {
-      console.log(params);
-      console.log(data);
+      if (verbose) {
+        console.log(params);
+        console.log(data);
+      }
       err ? onError(err) : onSuccess(data)
     });
 
@@ -40,8 +53,10 @@ exports._query = function(params) {
 exports._get = function(params) {
   return function(onError, onSuccess) {
     client.get(params, function(err, data) {
-      console.log(params);
-      console.log(data);
+      if (verbose) {
+        console.log(params);
+        console.log(data);
+      }
       err ? onError(err) : onSuccess(data)
     });
 
@@ -54,7 +69,10 @@ exports._get = function(params) {
 exports._put = function(params) {
   return function(onError, onSuccess) {
     client.put(params, function(err, data) {
-      console.log(params);
+      if (verbose) {
+        console.log(params);
+        console.log(data);
+      }
       err ? onError(err) : onSuccess(data)
     });
 
@@ -67,7 +85,10 @@ exports._put = function(params) {
 exports._delete = function(params) {
   return function(onError, onSuccess) {
     client.delete(params, function(err, data) {
-      console.log(params);
+      if (verbose) {
+        console.log(params);
+        console.log(data);
+      }
       err ? onError(err) : onSuccess(data)
     });
 
@@ -84,7 +105,10 @@ exports._count = function(tableName) {
       "Select": 'COUNT'
     };
     client.scan(params, function(err, data) {
-      console.log(params);
+      if (verbose) {
+        console.log(params);
+        console.log(data);
+      }
       err ? onError(err) : onSuccess(data.Count)
     });
 
