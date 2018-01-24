@@ -18,6 +18,7 @@ provider:
         - dynamodb:DeleteItem
       Resource:
         - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.RESOURCE_PREFIX}photos"
+        - "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.RESOURCE_PREFIX}pests"
     - Effect: Allow
       Action:
         - dynamodb:GetRecords
@@ -142,6 +143,23 @@ resources:
             ProvisionedThroughput:
               ReadCapacityUnits: 1
               WriteCapacityUnits: 1
+
+    PestsDynamoDbTable:
+      Type: "AWS::DynamoDB::Table"
+      # DeletionPolicy: Retain
+      Properties:
+        TableName: ${self:provider.environment.RESOURCE_PREFIX}pests
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        AttributeDefinitions:
+          -
+            AttributeName: id
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: id
+            KeyType: HASH
 
     S3BucketPhotos:
       Type: "AWS::S3::Bucket"
