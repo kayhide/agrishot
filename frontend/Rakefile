@@ -19,7 +19,7 @@ $domain_prefix = ($stage == 'prod') ? 'www' : "www-#{$stage}"
 $domain = "#{$domain_prefix}.#{$app_basename}.com"
 $bucket_name = $domain
 $bucket_dir = 'admin'
-$table_name = "#{$app_name}-photos"
+$table_names = %w(photos pests).map { |s| [$app_name, s].join('-') }
 $identity_pool_name = $app_name.gsub(/-/, '_')
 $authenticated_role_name = "#{$app_name}-AuthenticatedRole"
 
@@ -239,59 +239,69 @@ namespace :cognito do
 end
 
 namespace :dynamodb do
-  dst_dir = File.join($wrk_dir, 'dynamodb', $table_name)
-  table_info = File.join(dst_dir, 'table_info.json')
-  table_role_policy = File.join(dst_dir, 'table_role_policy.json')
-  table_role_info = File.join(dst_dir, 'table_role_info.json')
+  $table_names.each do |table_name|
+    dst_dir = File.join($wrk_dir, 'dynamodb', table_name)
+    table_info = File.join(dst_dir, 'table_info.json')
+    table_role_policy = File.join(dst_dir, 'table_role_policy.json')
+    table_role_info = File.join(dst_dir, 'table_role_info.json')
 
-  src_of = ->(dst) { File.join($config_dir, dst.pathmap('%n.yml')) }
+    src_of = ->(dst) { File.join($config_dir, dst.pathmap('%n.yml')) }
 
-  directory dst_dir
+    directory dst_dir
 
-  file table_info => [dst_dir] do |t|
-    with_file table_info do
-      aws ['dynamodb', 'describe-table',
-           '--table-name', $table_name].join(' ')
+    file table_info => [dst_dir] do |t|
+      with_file table_info do
+        aws ['dynamodb', 'describe-table',
+             '--table-name', table_name].join(' ')
+      end
     end
-  end
 
-  file table_role_policy => [table_info, src_of.(table_role_policy)] do |t|
-    src = t.prerequisites.last
-    info = JSON.load File.open(table_info)
-    table_arn = info['Table']['TableArn']
-    with_file t.name do
-      res = ERB.new(open(src).read).result(binding)
-      JSON.dump YAML.load(res)
+    file table_role_policy => [table_info, src_of.(table_role_policy)] do |t|
+      src = t.prerequisites.last
+      info = JSON.load File.open(table_info)
+      table_arn = info['Table']['TableArn']
+      with_file t.name do
+        res = ERB.new(open(src).read).result(binding)
+        JSON.dump YAML.load(res)
+      end
     end
-  end
 
-  file table_role_info => [table_role_policy] do |t|
-    policy_name = "#{$table_name}_table_access"
-    with_file t.name do
-      aws ['iam', 'put-role-policy',
-           '--role-name', $authenticated_role_name,
-           '--policy-name', policy_name,
-           '--policy-document', "file://#{table_role_policy}"].join(' ')
-      aws ['iam', 'get-role-policy',
-           '--role-name', $authenticated_role_name,
-           '--policy-name', policy_name].join(' ')
+    file table_role_info => [table_role_policy] do |t|
+      policy_name = "#{table_name}_table_access"
+      with_file t.name do
+        aws ['iam', 'put-role-policy',
+             '--role-name', $authenticated_role_name,
+             '--policy-name', policy_name,
+             '--policy-document', "file://#{table_role_policy}"].join(' ')
+        aws ['iam', 'get-role-policy',
+             '--role-name', $authenticated_role_name,
+             '--policy-name', policy_name].join(' ')
+      end
     end
+
+    task :put_role_policy => table_role_info
   end
 
   desc 'Put role policy of table access to authenticated role'
-  task :put_role_policy => [table_role_info]
+  task :put_role_policy
 
   task :pull do
-    with_file table_info, delete_on_fail: true do
-      aws ['dynamodb', 'describe-table',
-           '--table-name', $table_name].join(' ')
-    end
+    $table_names.each do |table_name|
+      dst_dir = File.join($wrk_dir, 'dynamodb', table_name)
+      table_info = File.join(dst_dir, 'table_info.json')
+      table_role_info = File.join(dst_dir, 'table_role_info.json')
 
-    with_file table_role_info, delete_on_fail: true do
-      policy_name = "#{$table_name}_table_access"
-      aws ['iam', 'get-role-policy',
-           '--role-name', $authenticated_role_name,
-           '--policy-name', policy_name].join(' ')
+      with_file table_info, delete_on_fail: true do
+        aws ['dynamodb', 'describe-table',
+             '--table-name', table_name].join(' ')
+      end
+
+      with_file table_role_info, delete_on_fail: true do
+        policy_name = "#{table_name}_table_access"
+        aws ['iam', 'get-role-policy',
+             '--role-name', $authenticated_role_name,
+             '--policy-name', policy_name].join(' ')
+      end
     end
   end
 end
