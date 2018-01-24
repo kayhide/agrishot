@@ -2,107 +2,72 @@ module Api.Photos where
 
 import Prelude
 
-import Api (Client(..))
+import Api (Client(Client))
+import Api as Api
 import Aws.Dynamo (DYNAMO)
-import Aws.Dynamo as Dynamo
 import Aws.Dynamo.Query as DQ
-import Control.Monad.Aff (Aff, error, throwError)
-import Control.Monad.Except (runExcept)
-import Data.Either (either)
-import Data.Foreign (Foreign, readArray, readNullOrUndefined)
-import Data.Foreign.Class (class Decode, decode, encode)
-import Data.Foreign.Index ((!))
-import Data.Maybe (Maybe)
+import Control.Monad.Aff (Aff)
+import Data.Foreign.Class (class Decode, class Encode)
+import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
+import Data.Generic.Rep (class Generic)
 import Data.StrMap as StrMap
-import Data.Traversable (traverse)
 import Model.Photo (Photo(..))
 
 
-type TableKey =
+newtype TableKey =
+  TableKey
   { id :: String
   , part :: Int
   , created_at :: Number
   }
 
-type QueryResult a =
-  { items :: Array a
-  , count :: Int
-  , lastKey :: Maybe TableKey
-  }
+derive instance genericTableKey :: Generic TableKey _
+derive instance eqTableKey :: Eq TableKey
 
-listFirst :: forall eff. Client -> DQ.Builder Unit -> Aff (dynamo :: DYNAMO | eff) (QueryResult Photo)
-listFirst (Client cli) q =
-  handleQuery =<< Dynamo.query do
-    DQ.tableName cli.photos.tableName
-    DQ.indexName cli.photos.indexNamePartCreatedAt
-    DQ.descending
-    DQ.keyCondition $ DQ.eq_ "#part" 0
-    q
+instance encodeTableKey :: Encode TableKey where
+  encode = genericEncode $ defaultOptions { unwrapSingleConstructors = true }
 
-listFirst' :: forall eff. Client -> Aff (dynamo :: DYNAMO | eff) (QueryResult Photo)
+instance decodeTableKey :: Decode TableKey where
+  decode = genericDecode $ defaultOptions { unwrapSingleConstructors = true }
+
+instance tablekeyTableKey :: DQ.TableKey TableKey
+
+type QueryBuilder = DQ.Builder TableKey Unit
+type QueryResult = Api.QueryResult Photo TableKey
+
+
+base :: Client -> QueryBuilder
+base (Client cli) = do
+  DQ.tableName cli.photos.tableName
+  DQ.indexName cli.photos.indexNamePartCreatedAt
+  DQ.descending
+  DQ.keyCondition $ DQ.eq_ "#part" 0
+
+listFirst :: forall eff. Client -> QueryBuilder -> Aff (dynamo :: DYNAMO | eff) QueryResult
+listFirst cli q = Api.queryFirst $ base cli *> q
+
+listFirst' :: forall eff. Client -> Aff (dynamo :: DYNAMO | eff) QueryResult
 listFirst' cli = listFirst cli $ pure unit
 
-listNext :: forall eff. Client -> TableKey -> DQ.Builder Unit -> Aff (dynamo :: DYNAMO | eff) (QueryResult Photo)
-listNext (Client cli) key q =
-  handleQuery =<< Dynamo.query do
-    DQ.tableName cli.photos.tableName
-    DQ.indexName cli.photos.indexNamePartCreatedAt
-    DQ.descending
-    DQ.keyCondition
-      $ DQ.and_
-      [ DQ.eq_ "#part" key.part
-      , DQ.lt_ "#created_at" key.created_at
-      ]
-    q
+listNext :: forall eff. Client -> TableKey -> QueryBuilder -> Aff (dynamo :: DYNAMO | eff) QueryResult
+listNext cli key q = Api.queryNext key $ base cli *> q
 
-listNext' :: forall eff. Client -> TableKey -> Aff (dynamo :: DYNAMO | eff) (QueryResult Photo)
+listNext' :: forall eff. Client -> TableKey -> Aff (dynamo :: DYNAMO | eff) QueryResult
 listNext' cli key = listNext cli key $ pure unit
-
-handleQuery :: forall eff a. Decode a => Foreign -> Aff eff (QueryResult a)
-handleQuery res =
-  either (throwError <<< error <<< show) pure $ runExcept $ readResult res
-
-  where
-    readResult v = do
-      items <- traverse decode =<< readArray =<< v ! "Items"
-      count <- decode =<< v ! "Count"
-      lastKey <- traverse readTableKey =<< readNullOrUndefined =<< v ! "LastEvaluatedKey"
-      pure { items, count, lastKey }
-
-    readTableKey v = do
-      id <- decode =<< v ! "id"
-      part <- decode =<< v ! "part"
-      created_at <- decode =<< v ! "created_at"
-      pure { id, part, created_at }
 
 
 find :: forall eff. Client -> String -> Aff (dynamo :: DYNAMO | eff) Photo
-find (Client cli) id =
-  handle =<< Dynamo.get
-    { "TableName": cli.photos.tableName
-    , "Key": encode $ StrMap.singleton "id" id
-    }
-  where
-    handle res =
-      either (throwError <<< error <<< show) pure $ runExcept $ readResult res
-    readResult res = decode $ res."Item"
+find (Client cli) id = Api.find cli.photos.tableName $ StrMap.singleton "id" id
 
 create :: forall eff. Client -> Photo -> Aff (dynamo :: DYNAMO | eff) Unit
 create = update
 
 update :: forall eff. Client -> Photo -> Aff (dynamo :: DYNAMO | eff) Unit
-update (Client cli) photo =
-  Dynamo.put
-    { "TableName": cli.photos.tableName
-    , "Item": encode photo
-    }
+update (Client cli) pest = Api.update cli.photos.tableName pest
 
 destroy :: forall eff. Client -> Photo -> Aff (dynamo :: DYNAMO | eff) Unit
 destroy (Client cli) (Photo { id }) =
-  Dynamo.delete
-    { "TableName": cli.photos.tableName
-    , "Key": encode $ StrMap.singleton "id" id
-    }
+  Api.destroy cli.photos.tableName $ StrMap.singleton "id" id
 
 count :: forall eff. Client -> Aff (dynamo :: DYNAMO | eff) Int
-count (Client cli) = Dynamo.count cli.photos.tableName
+count (Client cli) = Api.count cli.photos.tableName

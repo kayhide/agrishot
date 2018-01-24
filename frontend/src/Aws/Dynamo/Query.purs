@@ -6,85 +6,92 @@ import Aws.Dynamo.Expression (class ToOperand, Expr(..), encodeExpr, toOperand)
 import Control.Monad.State (State, execState, get, modify, put)
 import Data.Array ((:))
 import Data.Foreign (Foreign)
-import Data.Foreign.Class (class Encode, encode)
+import Data.Foreign.Class (class Decode, class Encode, encode)
 import Data.StrMap (StrMap)
 import Data.StrMap as StrMap
 import Data.Tuple (Tuple(..))
 
 
-data Option
+class (Eq t, Encode t, Decode t) <= TableKey t
+
+data Option t
   = TableName String
   | IndexName String
   | ScanIndexForward Boolean
   | Limit Int
+  | ExclusiveStartKey t
 
-derive instance eqOption :: Eq Option
+derive instance eqOption :: Eq t => Eq (Option t)
 
-newtype Params =
+newtype Params t =
   Params
-  { options :: Array Option
+  { options :: Array (Option t)
   , keyCondition :: Expr
   , filter :: Expr
   }
 
 
-newtype Builder a = Builder (State Params a)
+newtype Builder t a = Builder (State (Params t) a)
 
-instance fanctorBuilder :: Functor Builder where
+instance functorBuilder :: Functor (Builder t) where
   map f (Builder m) = Builder $ map f m
 
-instance applyBuilder :: Apply Builder where
+instance applyBuilder :: Apply (Builder t) where
   apply (Builder m) (Builder n) = Builder $ apply m n
 
-instance applicativeBuilder :: Applicative Builder where
+instance applicativeBuilder :: Applicative (Builder t) where
   pure x = Builder $ pure x
 
-instance bindBuilder :: Bind Builder where
+instance bindBuilder :: Bind (Builder t) where
   bind (Builder m) f = Builder $ m >>= \x -> case f x of Builder m_ -> m_
 
-instance monadBuilder :: Monad Builder
+instance monadBuilder :: Monad (Builder t)
 
-instance encodeBuilder :: Encode (Builder Unit) where
+instance encodeBuilder :: TableKey t => Encode (Builder t Unit) where
   encode (Builder m) = encode $ StrMap.union (encodeOptions x.options) (encodeExpr x.keyCondition x.filter)
     where
       Params x =
         execState m $ Params { options: [], keyCondition: Blank, filter: Blank }
 
 
-encodeOptions :: Array Option -> StrMap Foreign
+encodeOptions :: forall t. Encode t => Array (Option t) -> StrMap Foreign
 encodeOptions opts = StrMap.fromFoldable $ encode_ <$> opts
   where
     encode_ (TableName v) = Tuple "TableName" $ encode v
     encode_ (IndexName v) = Tuple "IndexName" $ encode v
     encode_ (ScanIndexForward v) = Tuple "ScanIndexForward" $ encode v
     encode_ (Limit v) = Tuple "Limit" $ encode v
+    encode_ (ExclusiveStartKey v) = Tuple "ExclusiveStartKey" $ encode v
 
 
-addOption :: Option -> Params -> Params
+addOption :: forall t. Option t -> Params t -> Params t
 addOption opt (Params x) = Params $ x { options = opt : x.options }
 
-tableName :: String -> Builder Unit
+tableName :: forall t. String -> Builder t Unit
 tableName = Builder <<< modify <<< addOption <<< TableName
 
-indexName :: String -> Builder Unit
+indexName :: forall t. String -> Builder t Unit
 indexName = Builder <<< modify <<< addOption <<< IndexName
 
-ascending :: Builder Unit
+ascending :: forall t. Builder t Unit
 ascending = Builder <<< modify <<< addOption <<< ScanIndexForward $ true
 
-descending :: Builder Unit
+descending :: forall t. Builder t Unit
 descending = Builder <<< modify <<< addOption <<< ScanIndexForward $ false
 
-limit :: Int -> Builder Unit
+limit :: forall t. Int -> Builder t Unit
 limit = Builder <<< modify <<< addOption <<< Limit
 
+exclusiveStartKey :: forall t. t -> Builder t Unit
+exclusiveStartKey = Builder <<< modify <<< addOption <<< ExclusiveStartKey
 
-keyCondition :: Expr -> Builder Unit
+
+keyCondition :: forall t. Expr -> Builder t Unit
 keyCondition expr = Builder do
   Params x <- get
   put $ Params $ x { keyCondition = expr }
 
-filter :: Expr -> Builder Unit
+filter :: forall t. Expr -> Builder t Unit
 filter expr = Builder do
   Params x <- get
   put $ Params $ x { filter = expr }

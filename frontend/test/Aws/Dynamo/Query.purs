@@ -11,7 +11,8 @@ import Control.Monad.Eff.Exception (EXCEPTION)
 import Control.Monad.Eff.Random (RANDOM)
 import Data.Array as Array
 import Data.Foldable (and)
-import Data.Foreign.Class (encode)
+import Data.Foreign (Foreign)
+import Data.Foreign.Class (class Decode, class Encode, encode)
 import Test.QuickCheck (Result, quickCheck, (===))
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -29,6 +30,15 @@ test = do
   testExpression
 
 
+newtype TestTableKey = TestTableKey Int
+derive instance eqTableKey :: Eq TestTableKey
+derive newtype instance encodeTableKey :: Encode TestTableKey
+derive newtype instance decodeTableKey :: Decode TestTableKey
+instance tablekeyTableKey :: DQ.TableKey TestTableKey
+
+encode' :: DQ.Builder TestTableKey Unit -> Foreign
+encode' = encode
+
 testParams :: forall eff. Aff_ eff Unit
 testParams = liftEff $ do
   quickCheck checkTableName
@@ -42,32 +52,38 @@ testParams = liftEff $ do
 checkTableName :: String -> Result
 checkTableName name = params."TableName" === name
   where
-    params = unsafeCoerce $ encode do
+    params = unsafeCoerce $ encode' do
       DQ.tableName name
 
 checkIndexName :: String -> Result
 checkIndexName name = params."IndexName" === name
   where
-    params = unsafeCoerce $ encode do
+    params = unsafeCoerce $ encode' do
       DQ.indexName name
 
 checkAscending :: Unit -> Result
 checkAscending _ = params."ScanIndexForward" === true
   where
-    params = unsafeCoerce $ encode do
+    params = unsafeCoerce $ encode' do
       DQ.ascending
 
 checkDescending :: Unit -> Result
 checkDescending _ = params."ScanIndexForward" === false
   where
-    params = unsafeCoerce $ encode do
+    params = unsafeCoerce $ encode' do
       DQ.descending
 
 checkLimit :: Int -> Result
 checkLimit i = params."Limit" === i
   where
-    params = unsafeCoerce $ encode do
+    params = unsafeCoerce $ encode' do
       DQ.limit i
+
+checkExclusiveStartKey :: Int -> Result
+checkExclusiveStartKey i = params."ExclusiveStartKey" === i
+  where
+    params = unsafeCoerce $ encode' do
+      DQ.exclusiveStartKey $ TestTableKey i
 
 checkKeyCondition :: String -> Number -> Boolean
 checkKeyCondition s n =
@@ -79,7 +95,7 @@ checkKeyCondition s n =
   , params."KeyConditionExpression" == "(#name = :1) AND (#age < :2)"
   ]
   where
-    params = unsafeCoerce $ encode do
+    params = unsafeCoerce $ encode' do
       DQ.keyCondition $
         DQ.and_
         [ DQ.eq_ "#name" s
@@ -96,7 +112,7 @@ checkFilter s n =
   , params."FilterExpression" == "(#name = :1) AND (#age < :2)"
   ]
   where
-    params = unsafeCoerce $ encode do
+    params = unsafeCoerce $ encode' do
       DQ.filter $
         DQ.and_
         [ DQ.eq_ "#name" s
@@ -140,4 +156,4 @@ testExpression = liftEff do
     DQ.eq_ "#name" (x :: String)
 
   where
-    check str exp = str === (_."FilterExpression" <<< unsafeCoerce <<< encode $ DQ.filter exp)
+    check str exp = str === (_."FilterExpression" <<< unsafeCoerce <<< encode' $ DQ.filter exp)

@@ -17,15 +17,17 @@ foreign import setup :: forall eff. AwsConfig -> Eff (dynamo :: DYNAMO | eff) Un
 foreign import verbose :: forall eff. Boolean -> Eff (dynamo :: DYNAMO | eff) Unit
 
 
-foreign import _scan :: forall eff a. Foreign -> EffFnAff (dynamo :: DYNAMO | eff) Foreign
+foreign import _scan :: forall eff. Foreign -> EffFnAff (dynamo :: DYNAMO | eff) Foreign
 
-scan :: forall eff a. Query.Builder Unit -> Aff (dynamo :: DYNAMO | eff) Foreign
+scan :: forall eff t. Query.TableKey t
+        => Query.Builder t Unit -> Aff (dynamo :: DYNAMO | eff) Foreign
 scan = fromEffFnAff <<< _scan <<< encode
 
 
-foreign import _query :: forall eff a. Foreign -> EffFnAff (dynamo :: DYNAMO | eff) Foreign
+foreign import _query :: forall eff. Foreign -> EffFnAff (dynamo :: DYNAMO | eff) Foreign
 
-query :: forall eff a. Query.Builder Unit -> Aff (dynamo :: DYNAMO | eff) Foreign
+query :: forall eff t. Query.TableKey t
+         => Query.Builder t Unit -> Aff (dynamo :: DYNAMO | eff) Foreign
 query = fromEffFnAff <<< _query <<< encode
 
 
