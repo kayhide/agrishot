@@ -4,8 +4,8 @@ import Prelude
 
 import Aws.Cognito (COGNITO)
 import Aws.Dynamo (DYNAMO)
-import Component.Layout as Layout
 import Component.Layout (AppConfig)
+import Component.Layout as Layout
 import Component.Route as R
 import Control.Monad.Aff (Aff, launchAff_)
 import Control.Monad.Aff.Console (CONSOLE)
@@ -17,6 +17,7 @@ import DOM (DOM)
 import Data.Array as Array
 import Data.Maybe (Maybe(..))
 import Data.String (Pattern(..), split)
+import Data.UUID (GENUUID)
 import Dom.Meta (META)
 import Dom.Meta as Meta
 import Halogen as H
@@ -25,14 +26,16 @@ import Halogen.VDom.Driver (runUI)
 import Routing (matches)
 
 
-type AppEffs = HA.HalogenEffects
-               ( meta :: META
-               , cognito :: COGNITO
-               , dynamo :: DYNAMO
-               , dom :: DOM
-               , now :: NOW
-               , console :: CONSOLE
-               )
+type AppEffs =
+  HA.HalogenEffects
+  ( meta :: META
+  , cognito :: COGNITO
+  , dynamo :: DYNAMO
+  , dom :: DOM
+  , now :: NOW
+  , console :: CONSOLE
+  , uuid :: GENUUID
+  )
 
 main :: Eff AppEffs Unit
 main = HA.runHalogenAff do

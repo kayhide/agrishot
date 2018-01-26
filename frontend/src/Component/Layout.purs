@@ -20,6 +20,7 @@ import Data.DateTime.Locale (Locale(..), LocaleName(..))
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.String as String
 import Data.Time.Duration (Minutes(..))
+import Data.UUID (GENUUID)
 import Halogen as H
 import Halogen.Component.ChildPath as CP
 import Halogen.Data.Prism (type (<\/>), type (\/))
@@ -82,7 +83,7 @@ cpPestList :: CP.ChildPath PestListPage.Query ChildQuery PestListPage.Slot Child
 cpPestList = CP.cp4
 
 
-type Eff_ eff = Aff (cognito :: COGNITO, dynamo :: DYNAMO, dom :: DOM, now :: NOW | eff)
+type Eff_ eff = Aff (cognito :: COGNITO, dynamo :: DYNAMO, dom :: DOM, now :: NOW, uuid :: GENUUID | eff)
 
 ui :: forall eff. H.Component HH.HTML Query Input Message (Eff_ eff)
 ui =
@@ -221,7 +222,7 @@ eval = case _ of
 
     hash <- H.liftEff $ Routing.getHash
     when (String.null hash) $
-      H.liftEff $ Routing.setHash "/"
+      H.liftEff $ Routing.setHash "/photos"
 
     pure next
 
