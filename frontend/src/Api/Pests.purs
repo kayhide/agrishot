@@ -2,15 +2,17 @@ module Api.Pests where
 
 import Prelude
 
-import Api (Client(..))
+import Api (Client(..), Entity(..), Persistence(..))
 import Api as Api
 import Aws.Dynamo (DYNAMO)
 import Aws.Dynamo.Query as DQ
 import Control.Monad.Aff (Aff)
+import Control.Monad.Eff (Eff)
 import Data.Foreign.Class (class Decode, class Encode)
 import Data.Foreign.Generic (defaultOptions, genericDecode, genericEncode)
 import Data.Generic.Rep (class Generic)
 import Data.StrMap as StrMap
+import Data.UUID (GENUUID, genUUID)
 import Model.Pest (Pest(..))
 
 
@@ -32,6 +34,7 @@ instance decodeTableKey :: Decode TableKey where
 
 instance tablekeyTableKey :: DQ.TableKey TableKey
 
+type PestEntity = Api.Entity Pest
 type QueryBuilder = DQ.Builder TableKey Unit
 type QueryResult = Api.QueryResult Pest TableKey
 
@@ -53,18 +56,30 @@ listNext' :: forall eff. Client -> TableKey -> Aff (dynamo :: DYNAMO | eff) Quer
 listNext' cli key = listNext cli key $ pure unit
 
 
-find :: forall eff. Client -> String -> Aff (dynamo :: DYNAMO | eff) Pest
+find :: forall eff. Client -> String -> Aff (dynamo :: DYNAMO | eff) PestEntity
 find (Client cli) id = Api.find cli.pests.tableName $ StrMap.singleton "id" id
 
-create :: forall eff. Client -> Pest -> Aff (dynamo :: DYNAMO | eff) Unit
+create :: forall eff. Client -> PestEntity -> Aff (dynamo :: DYNAMO | eff) PestEntity
 create = update
 
-update :: forall eff. Client -> Pest -> Aff (dynamo :: DYNAMO | eff) Unit
-update (Client cli) pest = Api.update cli.pests.tableName pest
+update :: forall eff. Client -> PestEntity -> Aff (dynamo :: DYNAMO | eff) PestEntity
+update (Client cli) (Entity _ pest) = do
+  Api.update cli.pests.tableName pest
+  pure $ Entity Persisted pest
 
-destroy :: forall eff. Client -> Pest -> Aff (dynamo :: DYNAMO | eff) Unit
-destroy (Client cli) (Pest { id }) =
+destroy :: forall eff. Client -> PestEntity -> Aff (dynamo :: DYNAMO | eff) Unit
+destroy (Client cli) (Entity _ (Pest { id })) =
   Api.destroy cli.pests.tableName $ StrMap.singleton "id" id
 
 count :: forall eff. Client -> Aff (dynamo :: DYNAMO | eff) Int
 count (Client cli) = Api.count cli.pests.tableName
+
+
+
+
+build :: forall eff. Eff (uuid :: GENUUID | eff) PestEntity
+build = do
+  id <- show <$> genUUID
+  pure $
+    Entity NotPersisted $
+    Pest { id, label: "", description: "", url: "http://" }

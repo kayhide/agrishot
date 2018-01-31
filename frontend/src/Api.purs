@@ -11,6 +11,7 @@ import Data.Either (either)
 import Data.Foreign (Foreign, readArray, readNullOrUndefined)
 import Data.Foreign.Class (class Decode, class Encode, decode, encode)
 import Data.Foreign.Index ((!))
+import Data.Lens (Lens', lens)
 import Data.Maybe (Maybe)
 import Data.Traversable (traverse)
 
@@ -39,8 +40,19 @@ makeClient stage =
   }
 
 
+data Persistence = NotPersisted | Persisted
+
+data Entity a = Entity Persistence a
+
+_Entity :: forall a. Lens' (Entity a) a
+_Entity = lens (\(Entity _ x) -> x) (\(Entity p _) x -> Entity p x)
+
+isPersisted :: forall a. Entity a -> Boolean
+isPersisted (Entity NotPersisted _) = false
+isPersisted (Entity Persisted _) = true
+
 type QueryResult a k =
-  { items :: Array a
+  { items :: Array (Entity a)
   , count :: Int
   , lastKey :: Maybe k
   }
@@ -57,7 +69,10 @@ handleQuery res =
       items <- traverse decode =<< readArray =<< v ! "Items"
       count_ <- decode =<< v ! "Count"
       lastKey <- traverse decode =<< readNullOrUndefined =<< v ! "LastEvaluatedKey"
-      pure { items, count: count_, lastKey }
+      pure { items: Entity Persisted <$> items
+           , count: count_
+           , lastKey
+           }
 
 
 scanFirst ::
@@ -97,7 +112,7 @@ type TableName = String
 find ::
   forall eff k a.
   Encode k => Decode a =>
-  TableName -> k -> Aff (dynamo :: DYNAMO | eff) a
+  TableName -> k -> Aff (dynamo :: DYNAMO | eff) (Entity a)
 find tableName key =
   handle =<< Dynamo.get
     { "TableName": tableName
@@ -106,7 +121,7 @@ find tableName key =
   where
     handle res =
       either (throwError <<< error <<< show) pure $ runExcept $ readResult res
-    readResult res = decode $ res."Item"
+    readResult res = Entity Persisted <$> decode res."Item"
 
 create ::
   forall eff a.

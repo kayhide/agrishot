@@ -2,7 +2,9 @@ module Component.PhotoListPage where
 
 import Prelude
 
+import Api (Entity(..))
 import Api as Api
+import Api.Photos (PhotoEntity)
 import Api.Photos as Photos
 import Aws.Dynamo (DYNAMO)
 import Component.HTML.DateTime as DateTime
@@ -35,7 +37,7 @@ data Query a
 type State =
   { client :: Api.Client
   , locale :: Locale
-  , items :: Array Photo
+  , items :: Array PhotoEntity
   , last :: Maybe Photos.TableKey
   , busy :: Boolean
   }
@@ -107,7 +109,7 @@ render state =
         ] []
       ]
 
-    renderItem (Photo { id, sender_id, image_url, created_at, sender }) =
+    renderItem (Entity _ (Photo { id, sender_id, image_url, created_at, sender })) =
       HH.div
       [ HP.class_ $ H.ClassName "col-md-2 col-sm-4 col-6 pb-2" ]
       [ HH.div

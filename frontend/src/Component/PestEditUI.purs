@@ -2,7 +2,9 @@ module Component.PestEditUI where
 
 import Prelude
 
+import Api (_Entity, isPersisted)
 import Api as Api
+import Api.Pests (PestEntity)
 import Api.Pests as Pests
 import Aws.Dynamo (DYNAMO)
 import Component.HTML.LoadingIndicator as LoadingIndicator
@@ -40,27 +42,27 @@ data Query a
   | Cancel a
 
 type State =
-  { item :: Pest
-  , editing :: Pest
+  { item :: PestEntity
+  , editing :: PestEntity
   , client :: Api.Client
   , locale :: Locale
   , busy :: Boolean
   }
 
-_editing :: Lens' State Pest
+_editing :: Lens' State PestEntity
 _editing = prop (SProxy :: SProxy "editing")
 
 
 type Input =
-  { item :: Pest
+  { item :: PestEntity
   , client :: Api.Client
   , locale :: Locale
   }
 
 data Message
   = Failed String
-  | Submitted Pest
-  | Deleted Pest
+  | Submitted PestEntity
+  | Deleted PestEntity
   | Canceled
 
 
@@ -104,24 +106,22 @@ render state =
     [ HP.class_ $ H.ClassName "card-footer" ]
     [
       HH.div
-      [ HP.class_ $ H.ClassName "d-flex" ]
-      [
-        renderSubmitButton
-      , renderDeleteButton
-      ]
+      [ HP.class_ $ H.ClassName "d-flex" ] $
+      if persisted then renderUpdateButtons else renderCreateButtons
     ]
   ]
 
   where
-    modified = state.editing /= state.item
+    persisted = isPersisted state.editing
+    modified = (view _Entity state.editing) /= (view _Entity state.item)
 
     renderTextField :: String -> String -> Lens' Pest String -> H.ComponentHTML Query
     renderTextField key label attr =
-      TextField.render key label (view attr state.editing) $ SetString attr
+      TextField.render key label (view (_Entity <<< attr) state.editing) $ SetString attr
 
     renderTextArea :: String -> String -> Lens' Pest String -> H.ComponentHTML Query
     renderTextArea key label attr =
-      TextArea.render key label (view attr state.editing) $ SetString attr
+      TextArea.render key label (view (_Entity <<< attr) state.editing) $ SetString attr
 
     renderTopRightButton style icon q =
         HH.button
@@ -134,21 +134,31 @@ render state =
           ] []
         ]
 
-    renderSubmitButton =
-      HH.button
-      [ HP.class_ $ H.ClassName $
-        "btn btn-primary" <> if modified then "" else " disabled"
-      , HE.onClick $ HE.input_ Submit
+    renderCreateButtons =
+      [
+        HH.button
+        [ HP.class_ $ H.ClassName $
+          "btn btn-primary" <> if modified then "" else " disabled"
+        , HE.onClick $ HE.input_ Submit
+        ]
+        [ HH.text Ja.create ]
       ]
-      [ HH.text Ja.submit ]
 
-    renderDeleteButton =
-      HH.button
-      [ HP.class_ $ H.ClassName $
-        "ml-auto btn btn-danger" <> if modified then "" else " disabled"
-      , HE.onClick $ HE.input_ Delete
+    renderUpdateButtons =
+      [
+        HH.button
+        [ HP.class_ $ H.ClassName $
+          "btn btn-primary" <> if modified then "" else " disabled"
+        , HE.onClick $ HE.input_ Submit
+        ]
+        [ HH.text Ja.update ]
+      , HH.button
+        [ HP.class_ $ H.ClassName $
+          "ml-auto btn btn-danger"
+        , HE.onClick $ HE.input_ Delete
+        ]
+        [ HH.text Ja.delete ]
       ]
-      [ HH.text Ja.delete ]
 
 eval :: forall eff. Query ~> H.ComponentDSL State Query Message (Eff_ eff)
 eval = case _ of
@@ -156,11 +166,11 @@ eval = case _ of
     pure next
 
   SetString attr v next -> do
-    assign (_editing <<< attr) v
+    assign (_editing <<< _Entity <<< attr) v
     pure next
 
   SetBoolean attr v next -> do
-    assign (_editing <<< attr) v
+    assign (_editing <<< _Entity <<< attr) v
     pure next
 
   Submit next -> do
@@ -171,8 +181,8 @@ eval = case _ of
           =<< (H.liftAff $ attempt $ Pests.update client editing)
 
       case res of
-        Right _ ->
-          H.raise $ Submitted editing
+        Right pest ->
+          H.raise $ Submitted pest
         Left msg ->
           H.raise $ Failed msg
 

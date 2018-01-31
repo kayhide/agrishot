@@ -2,7 +2,9 @@ module Component.PestListPage where
 
 import Prelude
 
+import Api (Entity(..), _Entity, isPersisted)
 import Api as Api
+import Api.Pests (PestEntity)
 import Api.Pests as Pests
 import Aws.Dynamo (DYNAMO)
 import Component.HTML.LoadingIndicator as LoadingIndicator
@@ -20,7 +22,7 @@ import Data.Lens (Lens', assign, modifying, use, view, (^.))
 import Data.Lens.Record (prop)
 import Data.Maybe (Maybe(Nothing, Just), maybe)
 import Data.Symbol (SProxy(..))
-import Data.UUID (GENUUID, genUUID)
+import Data.UUID (GENUUID)
 import Halogen as H
 import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
@@ -37,7 +39,7 @@ derive instance ordSlot :: Ord Slot
 data Query a
   = Initialize a
   | New a
-  | Edit Pest a
+  | Edit PestEntity a
   | Reload a
   | LoadNext a
   | HandleEdit PestEditUI.Message a
@@ -45,21 +47,16 @@ data Query a
 type State =
   { client :: Api.Client
   , locale :: Locale
-  , items :: Array Pest
-  , editing :: Maybe Editing
+  , items :: Array PestEntity
+  , editing :: Maybe PestEntity
   , last :: Maybe Pests.TableKey
   , busy :: Boolean
   }
 
-type Editing =
-  { item :: Pest
-  , isNew :: Boolean
-  }
-
-_items :: Lens' State (Array Pest)
+_items :: Lens' State (Array PestEntity)
 _items = prop (SProxy :: SProxy "items")
 
-_editing :: Lens' State (Maybe Editing)
+_editing :: Lens' State (Maybe PestEntity)
 _editing = prop (SProxy :: SProxy "editing")
 
 _item :: forall r. Lens' { item :: Pest | r } Pest
@@ -121,10 +118,7 @@ render state =
     ]
   , HH.div
     [ HP.class_ $ H.ClassName "row no-gutters" ] $
-    [
-      renderNewItem
-    ]
-    <> (renderItem <$> state.items)
+    renderNewItem : (renderItem <$> state.items)
   ]
   <> (Array.fromFoldable $ renderLoadNextButton <$> state.last)
 
@@ -149,7 +143,7 @@ render state =
       col $
       HH.slot slot PestEditUI.ui { item, client, locale } $ HE.input HandleEdit
       where
-        slot = (PestEditUI.Slot $ item ^. Pest._id)
+        slot = PestEditUI.Slot $ item ^. (_Entity <<< Pest._id)
 
     renderTopRightButton style icon q =
         HH.button
@@ -164,8 +158,8 @@ render state =
 
     renderNewItem =
       maybe renderNewButton renderPestEditUI $ do
-        guard =<< _.isNew <$> state.editing
-        _.item <$> state.editing
+        guard =<< (not <<< isPersisted) <$> state.editing
+        state.editing
 
     renderNewButton =
       col $
@@ -182,13 +176,13 @@ render state =
         ]
       ]
 
-    renderItem pest@(Pest { id }) =
-      maybe (renderItem_ pest) renderPestEditUI $ do
-        guard =<< not <<< _.isNew <$> state.editing
-        guard =<< eq id <<< (view $ _item <<< Pest._id) <$> state.editing
+    renderItem pest@(Entity _ (Pest { id })) =
+      maybe (renderItemDetail pest) renderPestEditUI $ do
+        guard =<< isPersisted <$> state.editing
+        guard =<< eq id <<< (view $ _Entity <<< Pest._id) <$> state.editing
         pure pest
 
-    renderItem_ pest@(Pest { id, label, description, url }) =
+    renderItemDetail pest@(Entity _ (Pest { id, label, description, url })) =
       col $
       HH.div
       [ HP.class_ $ H.ClassName "card" ]
@@ -206,8 +200,11 @@ render state =
         [ HP.class_ $ H.ClassName "card-body" ]
         [
           HH.p
-          [ HP.class_ $ H.ClassName "card-text text-muted small" ]
+          [ HP.class_ $ H.ClassName "card-text small" ]
           [ HH.text description ]
+        , HH.p
+          [ HP.class_ $ H.ClassName "card-text text-muted small" ]
+          [ HH.text id ]
         , HH.a
           [ HP.href $ url
           ]
@@ -230,18 +227,12 @@ eval = case _ of
     eval $ Reload next
 
   New next -> do
-    id <- show <$> H.liftEff genUUID
-    assign _editing $ Just
-      { item: Pest { id, label: "", description: "", url: "http://" }
-      , isNew: true
-      }
+    item <- H.liftEff Pests.build
+    assign _editing $ Just item
     pure next
 
   Edit item next -> do
-    assign _editing $ Just
-      { item
-      , isNew: false
-      }
+    assign _editing $ Just item
     pure next
 
   Reload next -> do
@@ -278,16 +269,16 @@ eval = case _ of
 
   HandleEdit (PestEditUI.Submitted item) next -> do
     items <- use _items
-    let id = item ^. Pest._id
+    let id = item ^. _Entity <<< Pest._id
         items_ = do
-          i <- Array.findIndex ((_ == id) <<< view Pest._id) items
+          i <- Array.findIndex ((_ == id) <<< view (_Entity <<< Pest._id)) items
           Array.updateAt i item items
     maybe (pure unit) (assign _items) $ items_ <|> Just (item : items)
     assign _editing Nothing
     pure next
 
   HandleEdit (PestEditUI.Deleted item) next -> do
-    modifying _items $ Array.deleteBy ((==) `on` view Pest._id) item
+    modifying _items $ Array.deleteBy ((==) `on` view (_Entity <<< Pest._id)) item
     pure next
 
   HandleEdit PestEditUI.Canceled next -> do

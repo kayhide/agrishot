@@ -2,7 +2,7 @@ module Api.Photos where
 
 import Prelude
 
-import Api (Client(Client))
+import Api (Client(Client), Entity(..), Persistence(..))
 import Api as Api
 import Aws.Dynamo (DYNAMO)
 import Aws.Dynamo.Query as DQ
@@ -32,6 +32,7 @@ instance decodeTableKey :: Decode TableKey where
 
 instance tablekeyTableKey :: DQ.TableKey TableKey
 
+type PhotoEntity = Api.Entity Photo
 type QueryBuilder = DQ.Builder TableKey Unit
 type QueryResult = Api.QueryResult Photo TableKey
 
@@ -56,17 +57,19 @@ listNext' :: forall eff. Client -> TableKey -> Aff (dynamo :: DYNAMO | eff) Quer
 listNext' cli key = listNext cli key $ pure unit
 
 
-find :: forall eff. Client -> String -> Aff (dynamo :: DYNAMO | eff) Photo
+find :: forall eff. Client -> String -> Aff (dynamo :: DYNAMO | eff) PhotoEntity
 find (Client cli) id = Api.find cli.photos.tableName $ StrMap.singleton "id" id
 
-create :: forall eff. Client -> Photo -> Aff (dynamo :: DYNAMO | eff) Unit
+create :: forall eff. Client -> PhotoEntity -> Aff (dynamo :: DYNAMO | eff) PhotoEntity
 create = update
 
-update :: forall eff. Client -> Photo -> Aff (dynamo :: DYNAMO | eff) Unit
-update (Client cli) pest = Api.update cli.photos.tableName pest
+update :: forall eff. Client -> PhotoEntity -> Aff (dynamo :: DYNAMO | eff) PhotoEntity
+update (Client cli) (Entity _ photo) = do
+  Api.update cli.photos.tableName photo
+  pure $ Entity Persisted photo
 
-destroy :: forall eff. Client -> Photo -> Aff (dynamo :: DYNAMO | eff) Unit
-destroy (Client cli) (Photo { id }) =
+destroy :: forall eff. Client -> PhotoEntity -> Aff (dynamo :: DYNAMO | eff) Unit
+destroy (Client cli) (Entity _ (Photo { id })) =
   Api.destroy cli.photos.tableName $ StrMap.singleton "id" id
 
 count :: forall eff. Client -> Aff (dynamo :: DYNAMO | eff) Int
