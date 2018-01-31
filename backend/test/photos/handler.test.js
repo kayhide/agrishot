@@ -56,6 +56,7 @@ describe('#photos-recognize', () => {
         might_be_wrong: 'Might be wrong...',
         contact_here: (id) => "Contact here: line://home/public/main?id=" + id,
         shop_site_here: (url) => "Shop site here: " + url,
+        details_here: (url) => "Details here: " + url,
         predictions: (items) => ["Predictions:", ...items].join("\n"),
         '@global': true
       }
@@ -84,6 +85,27 @@ describe('#photos-recognize', () => {
             'Might be wrong...',
             'Contact here: line://home/public/main?id=atid1234',
             'Shop site here: http://shop.agrishot.test/',
+          ]
+        ));
+      });
+    });
+
+    it('replys with pests description and url', () => {
+      const Pest = proxyquire('app/models/pest', { 'aws-sdk': helper.awsStub })
+      return co(function *() {
+        const pest = Pest.create({
+          label: 'Mikan Sabi Dani',
+          description: 'This mikan is sabiing and daniing.',
+          url: 'http://agrishot.test/msd/'
+        });
+
+        const res = yield handle(event, {});
+        assert(_.isEqual(
+          messenger.replyTexts.getCall(0).args[1],
+          [
+            'Predictions:\nMikan Sabi Dani 98%\nChano Hokori Dani 31%',
+            'This mikan is sabiing and daniing.',
+            'Details here: http://agrishot.test/msd/',
           ]
         ));
       });

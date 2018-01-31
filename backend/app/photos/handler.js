@@ -1,5 +1,6 @@
 'use strict';
 
+const _ = require('lodash');
 const co = require('co');
 const promisify = require('util.promisify');
 const path = require('path');
@@ -13,6 +14,7 @@ const getObject = promisify(s3.getObject.bind(s3));
 const putObject = promisify(s3.putObject.bind(s3));
 
 const Photo = require('app/models/photo');
+const Pest = require('app/models/pest');
 const Messenger = require('app/messenger');
 const Predictor = require('app/predictor');
 const locale = require('app/locale');
@@ -38,12 +40,26 @@ module.exports.recognize = (event, context, callback) => {
     const predictions = yield Predictor.predict(photo.image_url);
     const items = predictions.slice(0, 2).map((item) => `${item.Tag} ${Math.floor(item.Probability * 100)}%`);
 
-    yield Messenger.replyTexts(photo.sender, [
-      t.predictions(items),
-      t.might_be_wrong,
-      t.contact_here(lineAtId),
-      t.shop_site_here(shopUrl)
-    ]);
+    let pest;
+    if (predictions[0]) {
+      const pests = yield Pest.all();
+      pest = _.find(pests, { label: predictions[0].Tag });
+    }
+    if (pest) {
+      yield Messenger.replyTexts(photo.sender, [
+        t.predictions(items),
+        pest.description,
+        t.details_here(pest.url)
+      ]);
+    }
+    else {
+      yield Messenger.replyTexts(photo.sender, [
+        t.predictions(items),
+        t.might_be_wrong,
+        t.contact_here(lineAtId),
+        t.shop_site_here(shopUrl)
+      ]);
+    }
     callback(null, { message: 'Recognize successfully called', event });
   }).catch((err) => {
     console.log(err);

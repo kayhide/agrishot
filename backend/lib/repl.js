@@ -6,7 +6,7 @@ const path = require('path');
 const co = require('co');
 
 
-if (!process.env.USE_REMOTE) {
+if (!process.env.ON_REMOTE) {
   console.log('using localstack...');
 }
 
@@ -46,8 +46,9 @@ co(function *() {
 
 function load() {
   repl.context['_'] = require('lodash');
-  if (process.env.USE_REMOTE) {
+  if (process.env.ON_REMOTE) {
     repl.context.Photo = require('app/models/photo');
+    repl.context.Pest = require('app/models/pest');
     repl.context.Messenger = require('app/messenger');
   }
   else {
@@ -61,6 +62,7 @@ function load() {
       }
     }
     repl.context.Photo = proxyquire('app/models/photo', stub);
+    repl.context.Pest = proxyquire('app/models/pest', stub);
     repl.context.Messenger = proxyquire('app/messenger', stub);
   }
 };

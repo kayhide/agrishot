@@ -10,5 +10,9 @@ module.exports = {
     "通販サイトはこちら。",
     url
   ].join("\n"),
+  details_here: (url) => [
+    "防除方法や推奨薬剤などの詳しい情報はこちら。",
+    url
+  ].join("\n"),
   predictions: (items) => ["予測:", ...items].join("\n")
 }
