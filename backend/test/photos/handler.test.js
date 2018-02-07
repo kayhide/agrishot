@@ -56,7 +56,6 @@ describe('#photos-recognize', () => {
         might_be_wrong: 'Might be wrong...',
         contact_here: (id) => "Contact here: line://home/public/main?id=" + id,
         shop_site_here: (url) => "Shop site here: " + url,
-        details_here: (url) => "Details here: " + url,
         predictions: (items) => ["Predictions:", ...items].join("\n"),
         '@global': true
       }
@@ -105,7 +104,7 @@ describe('#photos-recognize', () => {
           [
             'Predictions:\nMikan Sabi Dani 98%\nChano Hokori Dani 31%',
             'This mikan is sabiing and daniing.',
-            'Details here: http://agrishot.test/msd/',
+            'http://agrishot.test/msd/',
           ]
         ));
       });

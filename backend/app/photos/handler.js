@@ -49,7 +49,7 @@ module.exports.recognize = (event, context, callback) => {
       yield Messenger.replyTexts(photo.sender, [
         t.predictions(items),
         pest.description,
-        t.details_here(pest.url)
+        pest.url
       ]);
     }
     else {
